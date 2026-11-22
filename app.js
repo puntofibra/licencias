@@ -13,7 +13,7 @@ const P = {
   apps:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
   pagos:'<rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 10h19M6 15h4"/>', act:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
   aj:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.3l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2.2-1.3L14 3h-4l-.4 2.5a7 7 0 0 0-2.2 1.3l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2.6l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2.2 1.3L10 21h4l.4-2.5a7 7 0 0 0 2.2-1.3l2.3 1 2-3.4-2-1.5c.1-.4.1-.9.1-1.3z"/>',
-  mas:'<path d="M12 5v14M5 12h14"/>', copia:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>', wa:'<path d="M3.5 20.5 5 16a8.5 8.5 0 1 1 3.3 3.2z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5"/>',
+  mas:'<path d="M12 5v14M5 12h14"/>', bor:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', copia:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>', wa:'<path d="M3.5 20.5 5 16a8.5 8.5 0 1 1 3.3 3.2z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5"/>',
   rec:'<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>', sal:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
   web:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>', scr:'<path d="m8 8-5 4 5 4M16 8l5 4-5 4M13.5 5l-3 14"/>',
   inst:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>', comp:'<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 11 7.6-3.9M8.2 13l7.6 3.9"/>',
@@ -108,7 +108,7 @@ async function verLogin() {
   $('#app').hidden = true; $('#login').hidden = false;
   if (!API) { $('#lgCuerpo').innerHTML = '<p class="err">Falta configurar la URL del servidor en config.js</p>'; return; }
   $('#lgCuerpo').innerHTML = '<p class="sub">Conectando…</p>';
-  const r = await api('info'); if (r.ok) cfgInfo = r;
+  const r = await api('info'); if (r.ok) { cfgInfo = r; if (r.totp) modoLogin = 'totp'; }
   pintaLogin();
 }
 function pintaLogin() {
@@ -367,18 +367,32 @@ function vPagos() { const ps = D.pagos.slice().reverse(), tot = ps.reduce((s, p)
 function vAct() { $('#main').innerHTML = `<div class="vista">${cab('ACTIVIDAD', 'Altas, renovaciones, bloqueos y accesos denegados')}<div class="card bloque st">${D.log.length ? D.log.map(filaLog).join('') : `<div class="vacio">${ic('act')}Todavía no hay actividad</div>`}</div></div>`; }
 
 /* ---------- ajustes ---------- */
-function vAjustes() { const c = D.cfg;
+const normLlave = v => String(v || '').replace(/[^0-9a-f]/gi, '').toUpperCase();
+const listaLlaves = t => [...new Set(String(t || '').split(',').map(normLlave).filter(Boolean))];
+async function guardaLlaves(lista, msg) { const c = D.cfg;
+  const r = await api('cfgGuardar', { cfg:{ tag:c.tag, whatsapp:c.whatsapp, gracia:c.gracia, maxDisp:c.maxDisp, aviso:c.aviso, llaves:lista.join(',') } });
+  if (r.ok) { if (!r.datos) await api('datos'); toast(msg); pinta(); } else toast(r.error, true); }
+function vAjustes() { const c = D.cfg, ks = listaLlaves(c.llaves);
   $('#main').innerHTML = `<div class="vista">${cab('AJUSTES', '')}<div class="aj">
   <div class="card bloque st" style="--i:0"><h3>Cobro, soporte y reglas</h3><form id="fCfg"><div class="campo"><label>Tag de myPOS</label><input class="in" name="tag" value="${esc(c.tag)}"></div><div class="campo"><label>WhatsApp de soporte (con 34)</label><input class="in" name="whatsapp" inputmode="tel" value="${esc(c.whatsapp)}"></div>
   <div class="par"><div class="campo"><label>Días de gracia</label><input class="in" name="gracia" inputmode="numeric" value="${esc(c.gracia)}"></div><div class="campo"><label>Dispositivos / licencia</label><input class="in" name="maxDisp" inputmode="numeric" value="${esc(c.maxDisp)}"></div></div>
   <div class="campo"><label>Avisar al cliente (días antes)</label><input class="in" name="aviso" inputmode="numeric" value="${esc(c.aviso)}"></div>
-  <div class="campo"><label>Llaves NFC autorizadas (separadas por coma)</label><input class="in" name="llaves" value="${esc(c.llaves)}" style="font-family:var(--mono);font-size:12px"></div><button class="btn pri w" type="submit">GUARDAR</button></form></div>
-  <div class="card bloque st" style="--i:1"><h3>Contraseña</h3><p>Google Contraseñas la guarda con el usuario «${USUARIO}».</p><form id="fPass" autocomplete="on"><input class="oculto" type="text" name="username" autocomplete="username" value="${USUARIO}" readonly tabindex="-1">
-  <div class="campo"><input class="in" name="actual" type="password" autocomplete="current-password" placeholder="Contraseña actual" required></div><div class="campo"><input class="in" name="nueva" type="password" autocomplete="new-password" placeholder="Contraseña nueva" required minlength="6"></div><button class="btn w" type="submit">Cambiar contraseña</button></form></div>
-  <div class="card bloque st" style="--i:2"><h3>Google Authenticator</h3><p>${D.totp ? '<b class="c-ok">Activado.</b> Puedes entrar solo con el código de 6 dígitos.' : 'Actívalo para entrar al panel solo con el código de 6 dígitos, sin contraseña.'}</p><button class="btn w ${D.totp ? 'mal' : 'ok'}" id="bTotp">${D.totp ? 'Desactivar' : 'Activar Authenticator'}</button></div>
+  <input type="hidden" name="llaves" value="${esc(c.llaves)}"><button class="btn pri w" type="submit">GUARDAR</button></form></div>
+  <div class="card bloque st" style="--i:1"><h3>Llaves NFC</h3><p>${ks.length ? 'Estas llaves abren el panel. Borra la que ya no uses o hayas perdido.' : 'No hay ninguna llave dada de alta.'}</p>
+  ${ks.map((k, n) => `<div class="fila llave"><span class="lico">${ic('nfc')}</span><div class="g"><b>Llave ${n + 1}</b><small>${esc(k)}</small></div><button class="btn min mal" data-k="${esc(k)}" title="Borrar llave">${ic('bor')}</button></div>`).join('')}
+  <button class="btn w ok" id="bLlave" style="margin-top:12px">${ic('mas')}Añadir llave</button></div>
+  <div class="card bloque st" style="--i:2"><h3>Google Authenticator</h3><p>${D.totp ? '<b class="c-ok">Activado.</b> Puedes entrar solo con el código de 6 dígitos.' : 'Actívalo para entrar al panel solo con el código de 6 dígitos.'}</p><button class="btn w ${D.totp ? 'mal' : 'ok'}" id="bTotp">${D.totp ? 'Desactivar' : 'Activar Authenticator'}</button></div>
   <div class="card bloque st" style="--i:3"><h3>Datos y sesión</h3><p>Todo se guarda en tu Sheet «licencias». La sesión se cierra sola cada día a las 00:00.</p><div class="bts"><a class="btn" href="${esc(D.hoja)}" target="_blank" rel="noopener">${ic('hoja')}Abrir Sheet</a><button class="btn" id="aInst">${ic('inst')}Instalar</button><button class="btn" id="aComp">${ic('comp')}Compartir</button><button class="btn mal" id="aSal">${ic('sal')}Cerrar sesión</button></div></div></div></div>`;
   $('#fCfg').onsubmit = async e => { e.preventDefault(); const r = await api('cfgGuardar', { cfg:Object.fromEntries(new FormData(e.target)) }); if (r.ok) { toast('Ajustes guardados'); pinta(); } else toast(r.error, true); };
-  $('#fPass').onsubmit = async e => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); const r = await api('passCambiar', { actual:d.actual, nueva:d.nueva }); if (r.ok) { toast('Contraseña cambiada'); e.target.reset(); } else toast(r.error, true); };
+  $('#main').querySelectorAll('[data-k]').forEach(b => b.onclick = async () => { const k = b.dataset.k;
+    if (ks.length === 1 && !D.totp) return toast('Es tu única llave: activa antes Google Authenticator', true);
+    if (await confirma('Borrar llave', 'La llave ' + k + ' dejará de abrir el panel' + (ks.length === 1 ? '. Es la última: solo podrás entrar con Google Authenticator.' : '.'), 'Borrar')) guardaLlaves(ks.filter(x => x !== k), 'Llave borrada'); });
+  $('#bLlave').onclick = () => { const nfc = 'NDEFReader' in window;
+    const h = modal(`<h3>Añadir llave<button class="x">✕</button></h3><div class="cen">${nfc ? NFC_HTML + '<p class="ds" id="nfcMsg">Acerca la llave nueva a la parte trasera del móvil</p>' : '<p class="ds">Abre el panel en un móvil Android para leerla por NFC, o escribe aquí su número de serie.</p>'}
+    <input class="in" id="kSer" placeholder="Número de serie" autocapitalize="characters" style="font-family:var(--mono);text-align:center;margin-bottom:10px"><button class="btn pri w" id="kOk">AÑADIR</button></div>`);
+    const alta = v => { const k = normLlave(v); if (k.length < 8) return toast('Número de serie no válido', true); if (ks.includes(k)) return toast('Esa llave ya está dada de alta', true); paraNfc(); cierra(); guardaLlaves(ks.concat(k), 'Llave añadida'); };
+    h.querySelector('#kOk').onclick = () => alta(h.querySelector('#kSer').value);
+    if (nfc) { cierra.fn = paraNfc; leeNfc(s => { if (navigator.vibrate) navigator.vibrate(60); alta(s); }, m => { const e = h.querySelector('#nfcMsg'); if (e) e.textContent = m; }); } };
   $('#bTotp').onclick = async () => { if (D.totp) { if (await confirma('Desactivar Authenticator', 'Ya no podrás entrar con el código de 6 dígitos.', 'Desactivar')) { await api('totpQuitar'); await api('datos'); toast('Authenticator desactivado'); pinta(); } return; }
     const r = await api('totpNuevo'); if (!r.ok) return toast(r.error, true);
     const h = modal(`<h3>Google Authenticator<button class="x">✕</button></h3><div class="cen"><p class="ds">Escanea el QR con la app Google Authenticator y escribe el código que te salga.</p>${qrHtml(r.uri)}<button class="cod" id="tSec"><span style="font-size:10.5px;word-break:break-all">${r.secreto}</span>${ic('copia')}</button>
