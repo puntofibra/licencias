@@ -138,7 +138,7 @@ function pintaLogin() {
     b.disabled = true; const r = await api('login', { totp:v }); b.disabled = false;
     if (r.ok) entrar(r.t); else { $('#lgErr').textContent = r.error || 'No se pudo entrar'; bip(200); $('.caja').animate([{ transform:'translateX(0)' }, { transform:'translateX(-9px)' }, { transform:'translateX(9px)' }, { transform:'translateX(0)' }], { duration:300 }); } };
 }
-async function entrar(t) { TOKEN = t; localStorage.setItem('lic_token', t); bip(660); setTimeout(() => bip(990), 90); const r = await api('datos'); if (r.ok) { $('#login').hidden = true; $('#app').hidden = false; ir('inicio'); } else verLogin(); }
+async function entrar(t) { TOKEN = t; localStorage.setItem('lic_token', t); bip(660); setTimeout(() => bip(990), 90); const r = await api('datos'); if (r.ok) { $('#login').hidden = true; $('#app').hidden = false; ir('inicio'); refrescaEnlaces(); } else verLogin(); }
 function salir(caducada) { TOKEN = ''; localStorage.removeItem('lic_token'); D = null; cierra(); verLogin(); if (caducada === true) toast('Sesión caducada', true); }
 
 /* ---------- llave NFC ---------- */
@@ -338,9 +338,22 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
 // Loader de Tampermonkey: guarda el código del script y solo pregunta al servidor cada REVISA horas,
 // así arranca al instante y no llama al servidor en cada página que abre el cliente.
 const REVISA_H = 3;
+// versión del loader: al subirla, el panel actualiza los enlaces guardados y Tampermonkey se lo baja solo a los clientes
+const LOADER_V = '2.1';
+async function refrescaEnlaces() {
+  try {
+    if (!D || !D.inst || localStorage.getItem('loader_v') === LOADER_V) return;
+    for (const k of D.inst) {
+      const l = D.lics.find(x => x.codigo === k); if (!l) continue;
+      const a = appDe(l.app), lista = (a.pack || [a]).filter(x => x.tipo === 'script');
+      if (lista.length) await api('enlacesCrear', { codigo:l.codigo, lista:lista.map(x => ({ app:x.id, texto:loader(l, x) })) });
+    }
+    localStorage.setItem('loader_v', LOADER_V);
+  } catch (e) {}
+}
 function loader(l, a) {
   const m = urlsDe(a.url), gr = ['GM_xmlhttpRequest', 'GM_getValue', 'GM_setValue', 'GM_deleteValue', 'GM_listValues', 'GM_addStyle', 'GM_openInTab', 'GM_setClipboard', 'GM_notification', 'GM_registerMenuCommand', 'unsafeWindow'];
-  return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      2.0', '// @description  ' + a.nombre,
+  return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      ' + LOADER_V, '// @description  ' + a.nombre,
   ...(m.length ? m : ['*://*/*']).map(u => '// @match        ' + u), ...gr.map(g => '// @grant        ' + g),
   '// @connect      script.google.com', '// @connect      script.googleusercontent.com', '// @run-at       document-start', '// ==/UserScript==', ''].join('\n') + String.raw`
 (function () {
@@ -368,18 +381,33 @@ function loader(l, a) {
   function aviso(r) {
     if (r.estado === 'apagada') return errorConexion();
     cuando('document-end', function () {
-      var d = document.createElement('div');
-      d.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#000;color:#17ff5f;border:1px solid #17ff5f;box-shadow:0 0 24px rgba(23,255,95,.45);font:13px/1.5 monospace;padding:16px 18px;border-radius:10px;max-width:320px;text-shadow:0 0 6px rgba(23,255,95,.6)';
-      var h = '<b style="font-size:15px">💀 ' + (r.app || APP) + '</b><br>' + (r.msg || 'Licencia no válida') + '<br>';
-      if (r.pago && (r.estado === 'vencida' || r.estado === 'bloqueada')) h += '<a href="' + r.pago + '" target="_blank" style="display:inline-block;margin:10px 8px 0 0;padding:7px 12px;background:#17ff5f;color:#000;text-decoration:none;font-weight:bold;border-radius:6px;text-shadow:none">PAGAR ' + (r.importe ? r.importe + ' €' : '') + '</a>';
+      // un solo cartel por licencia: si otro script del mismo pack ya lo ha puesto en esta página, no se repite
+      var id = 'fmx-lic-' + String(LIC).replace(/[^A-Za-z0-9]/g, '');
+      if (document.getElementById(id)) return;
+      var pack = +r.pack > 1, cobro = r.pago && (r.estado === 'vencida' || r.estado === 'bloqueada');
+      var d = document.createElement('div'); d.id = id;
+      d.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#000;color:#17ff5f;border:1px solid #17ff5f;box-shadow:0 0 24px rgba(23,255,95,.45);font:13px/1.5 monospace;padding:16px 18px;border-radius:10px;max-width:330px;text-shadow:0 0 6px rgba(23,255,95,.6)';
+      var h = '<button title="Cerrar" style="position:absolute;top:6px;right:8px;background:none;border:0;color:#17ff5f;font:16px monospace;cursor:pointer;opacity:.7">✕</button>';
+      if (pack && cobro) {
+        // pack: un solo mensaje que deja claro que es un único pago para todas las aplicaciones
+        var f = String(r.vence || '').split('-').reverse().join('/');
+        h += '<b style="font-size:15px">💀 Licencia de tu pack de aplicaciones</b><br>'
+          + (r.estado === 'bloqueada' ? 'La licencia de tu pack está suspendida' : 'La licencia de tu pack venció' + (f ? ' el ' + f : ''))
+          + ' y sus <b>' + r.pack + ' aplicaciones</b> se han detenido.'
+          + '<div style="margin-top:8px;padding:7px 9px;border:1px dashed rgba(23,255,95,.5);border-radius:6px">Es <b>un único pago</b>' + (r.importe ? ' de <b>' + r.importe + ' €</b>' : '') + ' que reactiva <b>todo el pack</b> a la vez. No tienes que pagar cada aplicación por separado.</div>'
+          + (r.codigo ? '<div style="margin-top:8px">Al pagar, escribe en el motivo del pago tu código <b>' + r.codigo + '</b> y el pack se reactivará solo en unos minutos.</div>' : '');
+      } else h += '<b style="font-size:15px">💀 ' + (r.app || APP) + '</b><br>' + (r.msg || 'Licencia no válida') + '<br>';
+      if (cobro) h += '<a href="' + r.pago + '" target="_blank" style="display:inline-block;margin:10px 8px 0 0;padding:7px 12px;background:#17ff5f;color:#000;text-decoration:none;font-weight:bold;border-radius:6px;text-shadow:none">PAGAR ' + (r.importe ? r.importe + ' €' : '') + (pack ? ' · PACK COMPLETO' : '') + '</a>';
       if (r.soporte) h += '<a href="' + r.soporte + '" target="_blank" style="display:inline-block;margin-top:10px;padding:7px 12px;border:1px solid #17ff5f;color:#17ff5f;text-decoration:none;border-radius:6px">SOPORTE</a>';
       d.innerHTML = h; document.body.appendChild(d);
+      d.querySelector('button').onclick = function () { d.remove(); };
     });
   }
 
   // si la app está apagada se enseña como un fallo de conexión (como mucho una vez cada 10 minutos)
   function errorConexion() {
     if (Date.now() - (+GM_getValue('lic_err', 0) || 0) < 600000) return;
+    if (document.getElementById('fmx-err')) return;
     GM_setValue('lic_err', Date.now());
     cuando('document-end', function () {
       var st = document.createElement('style');
@@ -656,6 +684,6 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal
 (async function () {
   const par = new URLSearchParams(location.search).get('par');
   if (par) return modoPasarLlave(par);
-  if (TOKEN) { const r = await api('datos'); if (r.ok) { $('#app').hidden = false; ir('inicio'); return; } if (!$('#login').hidden) return; }
+  if (TOKEN) { const r = await api('datos'); if (r.ok) { $('#app').hidden = false; ir('inicio'); refrescaEnlaces(); return; } if (!$('#login').hidden) return; }
   verLogin();
 })();
