@@ -50,7 +50,7 @@ document.addEventListener('pointermove', e => {
   const c = e.target.closest && e.target.closest('.card'); if (!c || e.pointerType !== 'mouse') return;
   const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
   c.style.setProperty('--mx', x * 100 + '%'); c.style.setProperty('--my', y * 100 + '%');
-  if (c.classList.contains('tilt')) c.style.transform = `perspective(900px) rotateX(${(.5 - y) * 5}deg) rotateY(${(x - .5) * 6}deg) translateY(-3px)`;
+  if (c.classList.contains('tilt') && !c.classList.contains('coge')) c.style.transform = `perspective(900px) rotateX(${(.5 - y) * 5}deg) rotateY(${(x - .5) * 6}deg) translateY(-3px)`;
 });
 document.addEventListener('pointerout', e => { const c = e.target.closest && e.target.closest('.card.tilt'); if (c && !c.contains(e.relatedTarget)) c.style.transform = ''; });
 function chispas(x, y, col) {
@@ -382,15 +382,44 @@ function integra(l, a) {
 
 /* ---------- apps ---------- */
 function vApps() {
-  $('#main').innerHTML = `<div class="vista">${cab('APLICACIONES', 'Cada app, juego o script que vendes con licencia', bNueva('bNApp'))}
-  <div class="grid">${D.apps.map((a, i) => { const ls = D.lics.filter(l => idsDe(l.app).includes(a.id)), act = ls.filter(l => l.ef === 'activa'), kb = D.scripts[a.id];
+  const tarjeta = (a, i) => { const ls = D.lics.filter(l => idsDe(l.app).includes(a.id)), act = ls.filter(l => l.ef === 'activa'), kb = D.scripts[a.id];
     return `<div class="card appc tilt st" style="--i:${i}" data-a="${a.id}"><div class="brillo"></div><div class="ico">${ic(a.tipo === 'script' ? 'scr' : 'web')}</div><h4>${esc(a.nombre)}</h4>
     <span style="font-size:11.5px;color:var(--sua)">${a.tipo === 'script' ? 'Script Tampermonkey' : 'Aplicación web'} · id <span style="font-family:var(--mono);color:var(--cian)">${a.id}</span></span>
     <div class="meta" style="margin-top:14px"><span>Licencias <b>${ls.length}</b></span><span>Activas <b class="c-ok">${act.length}</b></span><span>Mensual <b>${eur(act.reduce((s, l) => s + num(l.precio, 0), 0))}</b></span></div>
-    ${a.tipo === 'script' ? `<div class="meta" style="margin-top:8px"><span>Código: <b class="${kb ? 'c-ok' : 'c-warn'}">${kb ? Math.round(kb / 102.4) / 10 + ' KB subido' : 'sin subir'}</b></span></div>` : ''}</div>`; }).join('')}</div>
+    ${a.tipo === 'script' ? `<div class="meta" style="margin-top:8px"><span>Código: <b class="${kb ? 'c-ok' : 'c-warn'}">${kb ? Math.round(kb / 102.4) / 10 + ' KB subido' : 'sin subir'}</b></span></div>` : ''}</div>`; };
+  const webs = D.apps.filter(a => a.tipo !== 'script'), scrs = D.apps.filter(a => a.tipo === 'script');
+  const grupo = (t, icono, lista, i0) => lista.length ? `<h5 class="grupo">${ic(icono)}${t}<i>${lista.length}</i></h5><div class="grid gapp">${lista.map((a, i) => tarjeta(a, i0 + i)).join('')}</div>` : '';
+  $('#main').innerHTML = `<div class="vista">${cab('APLICACIONES', 'Cada app, juego o script que vendes con licencia' + (D.apps.length > 1 ? ' · mantén pulsada una tarjeta para moverla' : ''), bNueva('bNApp'))}
+  ${grupo('Aplicaciones web', 'web', webs, 0)}${grupo('Scripts de Tampermonkey', 'scr', scrs, webs.length)}
   ${D.apps.length ? '' : `<div class="vacio">${ic('caja')}Da de alta tu primera app o script con el botón NUEVA</div>`}</div>`;
-  $('#bNApp').onclick = () => editaApp(); $('#main').querySelectorAll('[data-a]').forEach(c => c.onclick = () => editaApp(c.dataset.a));
+  $('#bNApp').onclick = () => editaApp();
+  const todas = () => [...$('#main').querySelectorAll('[data-a]')].map(c => c.dataset.a);
+  $('#main').querySelectorAll('.gapp').forEach(g => ordenable(g, '[data-a]', 'a', todas, ids => api('appsOrden', { ids }), id => editaApp(id)));
 }
+// Mantener pulsada una tarjeta medio segundo la coge; se arrastra y al soltarla se guarda el orden
+function ordenable(grid, sel, key, leer, guardar, abrir) {
+  let timer = null, sx = 0, sy = 0, card = null, arrastra = false, ini = '';
+  const fin = async () => { clearTimeout(timer); const c = card; card = null; if (!c || !arrastra) return;
+    arrastra = false; c.classList.remove('coge'); grid.classList.remove('ordenando'); document.body.classList.remove('sinsel');
+    const ids = leer(); if (ids.join() === ini) return;
+    const r = await guardar(ids); if (r && r.ok) toast('Orden guardado'); else { toast((r && r.error) || 'No se ha podido guardar el orden', true); pinta(); } };
+  grid.querySelectorAll(sel).forEach(c => {
+    c.onclick = () => { if (c.dataset.movido) { delete c.dataset.movido; return; } abrir(c.dataset[key]); };
+    c.oncontextmenu = e => e.preventDefault();
+    c.onpointerdown = e => { if (e.button > 0) return; card = c; sx = e.clientX; sy = e.clientY; ini = leer().join(); clearTimeout(timer);
+      timer = setTimeout(() => { if (card !== c) return; arrastra = true; c.dataset.movido = '1'; c.style.transform = ''; c.classList.add('coge'); grid.classList.add('ordenando'); document.body.classList.add('sinsel');
+        if (navigator.vibrate) navigator.vibrate(40); bip(520, .04); try { c.setPointerCapture(e.pointerId); } catch (x) {} }, 450); };
+    c.onpointermove = e => { if (card !== c) return;
+      if (!arrastra) { if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 10) { clearTimeout(timer); card = null; } return; }
+      e.preventDefault();
+      const otro = document.elementsFromPoint(e.clientX, e.clientY).map(el => el.closest && el.closest(sel)).find(el => el && el !== c && el.parentNode === grid);
+      if (!otro) return;
+      const r = otro.getBoundingClientRect();
+      grid.insertBefore(c, e.clientX < r.left + r.width / 2 ? otro : otro.nextSibling); };
+    c.onpointerup = c.onpointercancel = fin;
+  });
+}
+document.addEventListener('touchmove', e => { if (document.body.classList.contains('sinsel')) e.preventDefault(); }, { passive:false });
 const urlsDe = v => String(v || '').split(/[\s,]+/).filter(Boolean);
 function editaApp(id) {
   const a = id ? appDe(id) : { nombre:'', tipo:'web', precio:'', url:'', notas:'' };
