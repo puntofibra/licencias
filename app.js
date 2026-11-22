@@ -307,7 +307,7 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
 /* ---------- integración ---------- */
 // Loader de Tampermonkey: guarda el código del script y solo pregunta al servidor cada REVISA horas,
 // así arranca al instante y no llama al servidor en cada página que abre el cliente.
-const REVISA_H = 6;
+const REVISA_H = 3;
 function loader(l, a) {
   const m = urlsDe(a.url), gr = ['GM_xmlhttpRequest', 'GM_getValue', 'GM_setValue', 'GM_deleteValue', 'GM_listValues', 'GM_addStyle', 'GM_openInTab', 'GM_setClipboard', 'GM_notification', 'GM_registerMenuCommand', 'unsafeWindow'];
   return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      2.0', '// @description  ' + a.nombre,
