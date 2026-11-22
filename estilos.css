@@ -245,3 +245,9 @@ body.sinsel{-webkit-user-select:none;user-select:none}
 .estrella.on svg{fill:#ffc53d;stroke:#ffc53d;filter:drop-shadow(0 0 8px rgba(255,197,61,.7))}
 .estrella:active{transform:scale(.88)}
 .hoja h5 .ayuda{float:right;letter-spacing:.05em;text-transform:none;font-weight:500;color:#6b7388}
+.appc .atop{display:flex;align-items:flex-start;gap:8px;margin-bottom:12px}
+.appc .atop .ico{margin-bottom:0}
+.appc .atop .chip{margin-top:9px}
+.appc .atop .sw{margin-left:auto;margin-top:9px}
+.appc.apagada h4,.appc.apagada .meta,.appc.apagada .atop .ico{opacity:.45}
+.appc.apagada{border-color:rgba(255,77,109,.3)}
