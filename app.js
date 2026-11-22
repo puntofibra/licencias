@@ -339,7 +339,7 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
 // así arranca al instante y no llama al servidor en cada página que abre el cliente.
 const REVISA_H = 3;
 // versión del loader: al subirla, el panel actualiza los enlaces guardados y Tampermonkey se lo baja solo a los clientes
-const LOADER_V = '2.1';
+const LOADER_V = '2.2';
 async function refrescaEnlaces() {
   try {
     if (!D || !D.inst || localStorage.getItem('loader_v') === LOADER_V) return;
@@ -353,7 +353,7 @@ async function refrescaEnlaces() {
 }
 function loader(l, a) {
   const m = urlsDe(a.url), gr = ['GM_xmlhttpRequest', 'GM_getValue', 'GM_setValue', 'GM_deleteValue', 'GM_listValues', 'GM_addStyle', 'GM_openInTab', 'GM_setClipboard', 'GM_notification', 'GM_registerMenuCommand', 'unsafeWindow'];
-  return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      ' + LOADER_V, '// @description  ' + a.nombre,
+  return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      ' + LOADER_V + '.' + new Date().toISOString().replace(/\D/g, '').slice(0, 12), '// @description  ' + a.nombre,
   ...(m.length ? m : ['*://*/*']).map(u => '// @match        ' + u), ...gr.map(g => '// @grant        ' + g),
   '// @connect      script.google.com', '// @connect      script.googleusercontent.com', '// @run-at       document-start', '// ==/UserScript==', ''].join('\n') + String.raw`
 (function () {
@@ -374,11 +374,33 @@ function loader(l, a) {
   }
   function runAt(code) { var r = /\/\/\s*@run-at\s+(document-(?:start|end|idle|body))/.exec(code); return r ? (r[1] === 'document-body' ? 'document-end' : r[1]) : 'document-idle'; }
   var lanzado = false;
+  // respeta las direcciones del propio script (@match / @include / @exclude de su cabecera),
+  // aunque el loader esté en todas las webs: así cada script solo funciona donde tiene que funcionar
+  function reglas(code) {
+    var cab = (String(code || '').match(/==UserScript==([\s\S]*?)==\/UserScript==/) || [])[1] || '', r = { inc: [], exc: [] };
+    cab.replace(/@(match|include|exclude)[ \t]+(\S+)/g, function (x, k, p) { (k === 'exclude' ? r.exc : r.inc).push(p); return x; });
+    return r;
+  }
+  function patron(p) {
+    if (p.length > 2 && p.charAt(0) === '/' && p.charAt(p.length - 1) === '/') { try { return new RegExp(p.slice(1, -1)); } catch (e) { return /^$/; } }
+    if (p === '<all_urls>') return /^(https?|file):/;
+    var s = p.replace(/[.+?^$(){}|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/^\.\*:\/\//, 'https?://');
+    return new RegExp('^' + s + '$');
+  }
+  function tocaR(r) {
+    var u = location.href, ok = function (p) { return patron(p).test(u); };
+    if (!r || r.exc.some(ok)) return !r;
+    return !r.inc.length || r.inc.some(ok);
+  }
+  function guardadas() { try { return JSON.parse(GM_getValue('lic_m', '') || 'null'); } catch (e) { return null; } }
   function lanza(c) {
     if (lanzado || !c || !c.code) return; lanzado = true;
+    if (!tocaR(reglas(c.code))) return;
     cuando(c.run, function () { try { Function.apply(null, NOMBRES.concat(c.code)).apply(null, VALORES); } catch (e) { console.error('[' + APP + ']', e); } });
   }
   function aviso(r) {
+    // los avisos solo salen en las webs donde funciona este script
+    var g = guardadas(); if (g && !tocaR(g)) return;
     if (r.estado === 'apagada') return errorConexion();
     cuando('document-end', function () {
       // un solo cartel por licencia: si otro script del mismo pack ya lo ha puesto en esta página, no se repite
@@ -387,16 +409,17 @@ function loader(l, a) {
       var pack = +r.pack > 1, cobro = r.pago && (r.estado === 'vencida' || r.estado === 'bloqueada');
       var d = document.createElement('div'); d.id = id;
       d.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#000;color:#17ff5f;border:1px solid #17ff5f;box-shadow:0 0 24px rgba(23,255,95,.45);font:13px/1.5 monospace;padding:16px 18px;border-radius:10px;max-width:330px;text-shadow:0 0 6px rgba(23,255,95,.6)';
+      var ICO = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#17ff5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:7px;filter:drop-shadow(0 0 4px rgba(23,255,95,.7))"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><circle cx="8.5" cy="11" r="2.3"/><path d="M5 16.5c.7-1.7 2-2.6 3.5-2.6s2.8.9 3.5 2.6M14.5 9.5h4.5M14.5 13h3"/></svg>';
       var h = '<button title="Cerrar" style="position:absolute;top:6px;right:8px;background:none;border:0;color:#17ff5f;font:16px monospace;cursor:pointer;opacity:.7">✕</button>';
       if (pack && cobro) {
         // pack: un solo mensaje que deja claro que es un único pago para todas las aplicaciones
         var f = String(r.vence || '').split('-').reverse().join('/');
-        h += '<b style="font-size:15px">💀 Licencia de tu pack de aplicaciones</b><br>'
+        h += '<b style="font-size:15px">' + ICO + 'Licencia de tu pack de aplicaciones</b><br>'
           + (r.estado === 'bloqueada' ? 'La licencia de tu pack está suspendida' : 'La licencia de tu pack venció' + (f ? ' el ' + f : ''))
           + ' y sus <b>' + r.pack + ' aplicaciones</b> se han detenido.'
           + '<div style="margin-top:8px;padding:7px 9px;border:1px dashed rgba(23,255,95,.5);border-radius:6px">Es <b>un único pago</b>' + (r.importe ? ' de <b>' + r.importe + ' €</b>' : '') + ' que reactiva <b>todo el pack</b> a la vez. No tienes que pagar cada aplicación por separado.</div>'
           + (r.codigo ? '<div style="margin-top:8px">Al pagar, escribe en el motivo del pago tu código <b>' + r.codigo + '</b> y el pack se reactivará solo en unos minutos.</div>' : '');
-      } else h += '<b style="font-size:15px">💀 ' + (r.app || APP) + '</b><br>' + (r.msg || 'Licencia no válida') + '<br>';
+      } else h += '<b style="font-size:15px">' + ICO + (r.app || APP) + '</b><br>' + (r.msg || 'Licencia no válida') + '<br>';
       if (cobro) h += '<a href="' + r.pago + '" target="_blank" style="display:inline-block;margin:10px 8px 0 0;padding:7px 12px;background:#17ff5f;color:#000;text-decoration:none;font-weight:bold;border-radius:6px;text-shadow:none">PAGAR ' + (r.importe ? r.importe + ' €' : '') + (pack ? ' · PACK COMPLETO' : '') + '</a>';
       if (r.soporte) h += '<a href="' + r.soporte + '" target="_blank" style="display:inline-block;margin-top:10px;padding:7px 12px;border:1px solid #17ff5f;color:#17ff5f;text-decoration:none;border-radius:6px">SOPORTE</a>';
       d.innerHTML = h; document.body.appendChild(d);
@@ -464,7 +487,7 @@ function loader(l, a) {
             var r = null; try { r = JSON.parse(x.responseText); } catch (e) {}
             if (r && r.ok && r.code) {
               var nn = { t: Date.now(), lic: LIC, code: r.code, run: runAt(r.code) };
-              GM_setValue('lic_cache', JSON.stringify(nn)); GM_setValue('lic_no', ''); GM_setValue('lic_err', 0);
+              GM_setValue('lic_cache', JSON.stringify(nn)); GM_setValue('lic_m', JSON.stringify(reglas(r.code))); GM_setValue('lic_no', ''); GM_setValue('lic_err', 0);
               d.className = 'ok'; d.querySelector('b').textContent = 'Conexión restablecida';
               d.querySelector('svg').innerHTML = '<path d="M20 6 9 17l-5-5"/>';
               d.querySelector('p').textContent = 'Conexión verificada correctamente. El servicio vuelve a estar activo y ya puedes seguir trabajando.'; d.querySelector('code').textContent = 'HTTP 200 · OK · conexión cifrada';
@@ -496,7 +519,7 @@ function loader(l, a) {
     method: 'GET', url: API + '?a=script&k=' + LIC + '&app=' + APP + '&d=' + dev + '&ua=' + encodeURIComponent(navigator.userAgent), timeout: 25000,
     onload: function (x) {
       var r; try { r = JSON.parse(x.responseText); } catch (e) { return; }
-      if (r.ok && r.code) { var n = { t: Date.now(), lic: LIC, code: r.code, run: runAt(r.code) }; GM_setValue('lic_cache', JSON.stringify(n)); GM_setValue('lic_no', ''); lanza(n); }
+      if (r.ok && r.code) { var n = { t: Date.now(), lic: LIC, code: r.code, run: runAt(r.code) }; GM_setValue('lic_cache', JSON.stringify(n)); GM_setValue('lic_m', JSON.stringify(reglas(r.code))); GM_setValue('lic_no', ''); lanza(n); }
       // licencia al día pero el script aún sin código: queda en espera, sin avisos, y vuelve a mirar a las 3 horas
       else if (r.estado === 'sincodigo') { GM_setValue('lic_cache', JSON.stringify({ t: Date.now(), lic: LIC, code: '', run: 'document-idle' })); GM_setValue('lic_no', ''); }
       else { GM_setValue('lic_cache', ''); GM_setValue('lic_no', JSON.stringify({ t: Date.now(), lic: LIC, r: r })); aviso(r); }
