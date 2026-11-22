@@ -298,7 +298,7 @@ function ficha(k) {
   <h5>Acciones</h5><div class="bts"><button class="btn ${blo ? 'ok' : 'mal'}" id="fBlo">${blo ? 'Activar' : 'Bloquear'}</button>${l.telefono ? `<a class="btn" href="${waCliente(l)}" target="_blank" rel="noopener">${ic('wa')}WhatsApp</a>` : ''}<button class="btn" id="fCobro">${ic('pagos')}Enlace de pago</button><button class="btn" id="fEd">Editar</button></div>
   <h5>Instalación${a.pack ? ' · una por cada app del pack' : ''}<span class="ayuda">★ entregado · 🔔 avisos de pago</span></h5>${(a.pack || [a]).some(x => x.tipo === 'script') ? `<button class="enlbtn" id="fEnl"><span class="ei">${ic('comp')}</span><span class="et"><b>Enlace de instalación</b><small>Un solo enlace: el cliente lo abre y pulsa Instalar. Sin copiar ni descargar.</small></span><span class="ef">›</span></button>` : ''}<div class="insl">${(a.pack || [a]).map(x => `<div class="insf"><button class="estrella ${idsDe(l.entregados).includes(x.id) ? 'on' : ''}" data-ent="${esc(x.id)}" title="Marcar como entregado al cliente">${ESTRELLA}</button>${x.tipo === 'script' ? `<button class="campana ${idsDe(l.silenciados).includes(x.id) ? 'on' : ''}" data-sil="${esc(x.id)}" title="${idsDe(l.silenciados).includes(x.id) ? AV_OFF : AV_ON}">${idsDe(l.silenciados).includes(x.id) ? CAMPANA_NO : CAMPANA}</button>` : ''}<button class="btn" data-ins="${esc(x.id)}">${ic(x.tipo === 'script' ? 'scr' : 'web')}${a.pack ? esc(x.nombre) : x.tipo === 'script' ? 'Generar loader de Tampermonkey' : 'Ver código de integración'}</button></div>`).join('')}</div>
   <h5>Dispositivos (${a.pack ? ds.length + (mx ? ' · máx. ' + mx + ' por app' : '') : ds.length + (mx ? '/' + mx : '')})</h5>
-  ${ds.length ? ds.map(d => `<div class="fila"><div class="g"><b>${esc(nombreDisp(d.info))}</b><small>${a.pack && d.app ? esc(app1(d.app).nombre) + ' · ' : ''}Desde ${fecha(d.primero)} · último ${fecha(d.ultimo)} ${d.ultimo.slice(11, 16)}</small></div><button class="btn min mal" data-d="${esc(d.disp)}">Liberar</button></div>`).join('') : '<p class="ds" style="margin:0">Ningún dispositivo registrado todavía.</p>'}
+  ${ds.length ? numDisp(ds, !!a.pack).map(d => `<div class="fila"><div class="g"><b>Dispositivo ${d.n}${a.pack && d.app ? ' · ' + esc(app1(d.app).nombre) : ''}</b><small>${esc(nombreDisp(d.info))} · desde ${fecha(d.primero)} · último uso ${fecha(d.ultimo)} ${d.ultimo.slice(11, 16)}</small></div><button class="btn min mal" data-d="${esc(d.disp)}">Liberar</button></div>`).join('') : '<p class="ds" style="margin:0">Ningún dispositivo registrado todavía.</p>'}
   ${pg.length ? `<h5>Pagos (${eur(pg.reduce((s, p) => s + num(p.importe, 0), 0))})</h5>` + pg.slice(-5).reverse().map(p => `<div class="fila"><div class="g"><b>${eur(p.importe)}</b><small>${fecha(p.fecha)} · ${p.meses} mes${p.meses == 1 ? '' : 'es'}</small></div></div>`).join('') : ''}
   <h5>Zona peligrosa</h5><button class="btn mal min" id="fDel">Eliminar licencia</button>`);
   h.querySelector('#fCod').onclick = () => copia(k, 'Código copiado');
@@ -331,6 +331,12 @@ async function enlaceInst(l, lista) {
   h.querySelector('#eU').onclick = () => copia(url, 'Enlace copiado');
   h.querySelector('#eC').onclick = () => copia(msg, 'Mensaje copiado');
   if (h.querySelector('#eW')) h.querySelector('#eW').onclick = () => toast('Abriendo WhatsApp…');
+}
+// numera los dispositivos por orden de llegada (Dispositivo 1, 2, 3…); en los packs, por cada script
+function numDisp(ds, pack) {
+  const c = {};
+  return ds.slice().sort((x, y) => (pack ? String(x.app).localeCompare(String(y.app)) : 0) || String(x.primero).localeCompare(String(y.primero)))
+    .map(d => { const g = pack ? d.app || '' : ''; c[g] = (c[g] || 0) + 1; return Object.assign({}, d, { n: c[g] }); });
 }
 const AV_ON = 'Avisos activos: si la licencia vence o se bloquea, este script enseña el cartel de pago. Pulsa para silenciarlo';
 const AV_OFF = 'Avisos silenciados: si la licencia vence o se bloquea, este script se para sin enseñar ningún cartel. Pulsa para activarlos';
