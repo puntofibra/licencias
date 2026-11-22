@@ -380,16 +380,59 @@ function loader(l, a) {
         + '#fmx-err .bar i{display:block;height:100%;width:40%;background:linear-gradient(90deg,transparent,#ff6b6b,transparent);animation:fmxBar 1.3s linear infinite}'
         + '@keyframes fmxBar{from{transform:translateX(-100%)}to{transform:translateX(250%)}}'
         + '#fmx-err .r{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:11.5px;color:#7d869b}'
-        + '#fmx-err .x{position:absolute;top:10px;right:12px;background:none;border:0;color:#7d869b;font-size:16px;cursor:pointer;padding:2px 4px}#fmx-err .x:hover{color:#fff}';
+        + '#fmx-err .x{position:absolute;top:10px;right:12px;background:none;border:0;color:#7d869b;font-size:16px;cursor:pointer;padding:2px 4px}#fmx-err .x:hover{color:#fff}'
+        + '#fmx-err .fz{margin-top:12px;width:100%;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,107,107,.45);background:rgba(255,107,107,.1);color:#ffd0d0;font:600 12.5px system-ui,Segoe UI,sans-serif;letter-spacing:.04em;cursor:pointer;transition:.2s}'
+        + '#fmx-err .fz:hover{background:rgba(255,107,107,.2);color:#fff}#fmx-err .fz:disabled{opacity:.6;cursor:wait}'
+        + '#fmx-err.ok{border-color:rgba(43,255,154,.45)}#fmx-err.ok .i{background:rgba(43,255,154,.12);border-color:rgba(43,255,154,.45);animation:none}#fmx-err.ok .i svg{stroke:#2bff9a}#fmx-err.ok .bar i{background:linear-gradient(90deg,transparent,#2bff9a,transparent)}#fmx-err.ok b{animation:none;color:#2bff9a}'
+        + '@keyframes fmxNo{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}'
+        + '#fmx-err .ay{margin-top:12px;font-size:11.5px;line-height:1.45;color:#8a93a8}#fmx-err .ay b{font-size:11.5px;color:#cfd5e2;animation:none}';
       document.head.appendChild(st);
       var d = document.createElement('div'); d.id = 'fmx-err';
       var n = 500 + Math.floor(Math.random() * 4);
       d.innerHTML = '<button class="x" title="Cerrar">&times;</button><div class="t"><div class="i"><svg viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0M12 20h.01M3 3l18 18"/></svg></div><b>Error de conexión</b></div>'
-        + '<p>No se ha podido conectar con el servidor. Inténtalo de nuevo más tarde.</p><code>ERR_CONNECTION_TIMED_OUT · HTTP ' + n + '</code>'
-        + '<div class="bar"><i></i></div><div class="r"><span>Reintentando…</span><span>' + new Date().toLocaleTimeString().slice(0, 5) + '</span></div>';
+        + '<p>No hemos podido establecer conexión con el servidor. Puede deberse a un mantenimiento o a una incidencia temporal de la red.</p><code>ERR_CONNECTION_TIMED_OUT · HTTP ' + n + '</code>'
+        + '<div class="bar"><i></i></div><div class="r"><span class="rs">Reintentando automáticamente…</span><span>' + new Date().toLocaleTimeString().slice(0, 5) + '</span></div>'
+        + '<div class="ay">Pulsa <b>Forzar conexión</b> para volver a intentarlo ahora mismo (como máximo una vez por minuto). Si el problema continúa, se reintentará solo en unos minutos.</div><button class="fz">FORZAR CONEXIÓN</button>';
       document.body.appendChild(d);
       var fuera = function () { d.style.transition = 'opacity .4s, transform .4s'; d.style.opacity = '0'; d.style.transform = 'translateY(16px)'; setTimeout(function () { d.remove(); st.remove(); }, 450); };
-      d.querySelector('.x').onclick = fuera; setTimeout(fuera, 12000);
+      var tm = setTimeout(fuera, 20000);
+      d.onmouseenter = function () { clearTimeout(tm); };
+      d.querySelector('.x').onclick = fuera;
+      // FORZAR CONEXIÓN: pregunta al servidor ahora mismo; si ya está encendida, guarda el script y lo arranca
+      var fz = d.querySelector('.fz'), rs = d.querySelector('.rs'), etq = 'FORZAR CONEXIÓN';
+      // como mucho una petición por minuto, aunque pulse muchas veces
+      var espera = function () { if (!d.isConnected || !fz.isConnected) return;
+        var q = 60000 - (Date.now() - (+GM_getValue('lic_fz', 0) || 0));
+        if (q <= 0) { fz.disabled = false; fz.textContent = etq; return; }
+        fz.disabled = true; fz.textContent = 'DISPONIBLE EN ' + Math.ceil(q / 1000) + ' S'; setTimeout(espera, 1000); };
+      espera();
+      var falla = function () { etq = 'VOLVER A INTENTARLO'; espera(); rs.textContent = 'El servidor sigue sin responder · ' + new Date().toLocaleTimeString().slice(0, 5);
+        d.querySelector('p').textContent = 'El servicio continúa sin estar disponible en este momento. Inténtalo de nuevo en unos minutos.'; d.style.animation = 'fmxNo .35s'; setTimeout(function () { d.style.animation = ''; }, 400); };
+      fz.onclick = function () {
+        if (Date.now() - (+GM_getValue('lic_fz', 0) || 0) < 60000) return espera();
+        GM_setValue('lic_fz', Date.now());
+        clearTimeout(tm); fz.disabled = true; fz.textContent = 'CONECTANDO…'; rs.textContent = 'Estableciendo conexión segura…';
+        GM_xmlhttpRequest({
+          method: 'GET', url: API + '?a=script&k=' + LIC + '&app=' + APP + '&d=' + dev + '&ua=' + encodeURIComponent(navigator.userAgent), timeout: 25000,
+          onload: function (x) {
+            var r = null; try { r = JSON.parse(x.responseText); } catch (e) {}
+            if (r && r.ok && r.code) {
+              var nn = { t: Date.now(), lic: LIC, code: r.code, run: runAt(r.code) };
+              GM_setValue('lic_cache', JSON.stringify(nn)); GM_setValue('lic_no', ''); GM_setValue('lic_err', 0);
+              d.className = 'ok'; d.querySelector('b').textContent = 'Conexión restablecida';
+              d.querySelector('svg').innerHTML = '<path d="M20 6 9 17l-5-5"/>';
+              d.querySelector('p').textContent = 'Conexión verificada correctamente. El servicio vuelve a estar activo y ya puedes seguir trabajando.'; d.querySelector('code').textContent = 'HTTP 200 · OK · conexión cifrada';
+              rs.textContent = 'Conectado · ' + new Date().toLocaleTimeString().slice(0, 5); fz.remove(); var ay = d.querySelector('.ay'); if (ay) ay.remove(); lanza(nn); setTimeout(fuera, 3500);
+            } else if (r && !r.ok && r.estado !== 'apagada') {
+              GM_setValue('lic_no', JSON.stringify({ t: Date.now(), lic: LIC, r: r })); fuera(); aviso(r);
+            } else {
+              if (r) GM_setValue('lic_no', JSON.stringify({ t: Date.now(), lic: LIC, r: r }));
+              falla();
+            }
+          },
+          onerror: falla, ontimeout: falla
+        });
+      };
     });
   }
 
