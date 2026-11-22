@@ -302,7 +302,7 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
 /* ---------- integración ---------- */
 function loader(l, a) {
   return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      1.0', '// @description  ' + a.nombre,
-  '// @match        ' + (a.url || '*://*/*'), '// @grant        GM_xmlhttpRequest', '// @grant        GM_getValue', '// @grant        GM_setValue', '// @grant        GM_addStyle', '// @grant        unsafeWindow',
+  ...(urlsDe(a.url).length ? urlsDe(a.url) : ['*://*/*']).map(u => '// @match        ' + u), '// @grant        GM_xmlhttpRequest', '// @grant        GM_getValue', '// @grant        GM_setValue', '// @grant        GM_addStyle', '// @grant        unsafeWindow',
   '// @connect      script.google.com', '// @connect      script.googleusercontent.com', '// @run-at       document-idle', '// ==/UserScript==', '',
   '(function () {', "  'use strict';", "  var API = '" + API + "', APP = '" + a.id + "', LIC = '" + l.codigo + "';",
   "  var dev = GM_getValue('lic_dev', ''); if (!dev) { dev = 'tm-' + Math.random().toString(36).slice(2) + Date.now().toString(36); GM_setValue('lic_dev', dev); }",
@@ -342,21 +342,33 @@ function vApps() {
   ${D.apps.length ? '' : `<div class="vacio">${ic('caja')}Da de alta tu primera app o script con el botón NUEVA</div>`}</div>`;
   $('#bNApp').onclick = () => editaApp(); $('#main').querySelectorAll('[data-a]').forEach(c => c.onclick = () => editaApp(c.dataset.a));
 }
+const urlsDe = v => String(v || '').split(/[\s,]+/).filter(Boolean);
 function editaApp(id) {
   const a = id ? appDe(id) : { nombre:'', tipo:'web', precio:'', url:'', notas:'' };
   const h = modal(`<h3>${id ? esc(a.nombre) : 'Nueva aplicación'}<button class="x">✕</button></h3><p class="ds">${id ? 'Identificador: ' + id : 'Una app o juego que vendes a clientes, o un script de Tampermonkey.'}</p>
   <form id="fApp"><div class="campo"><label>Nombre</label><input class="in" name="nombre" value="${esc(a.nombre)}" required placeholder="Ej. Panel Puntofibra"></div>
   <div class="par"><div class="campo"><label>Tipo</label><select class="in" name="tipo"><option value="web" ${a.tipo !== 'script' ? 'selected' : ''}>Aplicación web</option><option value="script" ${a.tipo === 'script' ? 'selected' : ''}>Script Tampermonkey</option></select></div>
   <div class="campo"><label>Mensualidad (€)</label><input class="in" name="precio" inputmode="decimal" value="${esc(a.precio)}"></div></div>
-  <div class="campo"><label id="lUrl"></label><input class="in" name="url" value="${esc(a.url)}"></div>
+  <div class="campo"><label id="lUrl"></label><div id="lstUrl"></div><button class="btn min w" type="button" id="bUrl" style="margin-top:6px">${ic('mas')}Añadir otra dirección</button><input type="hidden" name="url"></div>
   <div class="campo"><label>Notas</label><input class="in" name="notas" value="${esc(a.notas)}"></div>
   <button class="btn pri w" type="submit">GUARDAR</button></form>
   ${id ? `<div id="zScr"><h5>Código real del script</h5><p class="ds" style="margin-bottom:8px">Pega aquí el script completo. Se guarda en tu Sheet y solo se entrega a los clientes con la licencia al día.</p><textarea class="in" id="tScr" placeholder="Cargando…" style="min-height:150px"></textarea><button class="btn ok w" id="bScr" style="margin-top:8px">Subir código</button></div>
   <h5>Zona peligrosa</h5><button class="btn mal min" id="aDel">Eliminar aplicación</button>` : ''}`);
   const f = h.querySelector('#fApp'), tipo = f.elements.tipo;
-  const pon = () => { const s = tipo.value === 'script'; h.querySelector('#lUrl').textContent = s ? 'Dónde se ejecuta (@match)' : 'URL de la app (opcional)'; f.elements.url.placeholder = s ? 'https://www.ejemplo.com/*' : 'https://…'; const z = h.querySelector('#zScr'); if (z) z.hidden = !s; };
+  const lst = h.querySelector('#lstUrl'), esScr = () => tipo.value === 'script';
+  const fila = v => { const d = document.createElement('div'); d.className = 'murl';
+    d.innerHTML = `<input class="in" value="${esc(v || '')}" placeholder="${esScr() ? 'https://www.ejemplo.com/*' : 'https://…'}" spellcheck="false"><button class="btn min mal" type="button" title="Quitar">${ic('bor')}</button>`;
+    d.querySelector('button').onclick = () => { if (lst.children.length > 1) d.remove(); else d.querySelector('input').value = ''; marca(); };
+    lst.appendChild(d); return d.querySelector('input'); };
+  const marca = () => { const s = esScr(), n = lst.children.length; lst.classList.toggle('una', n < 2); h.querySelector('#bUrl').hidden = !s;
+    lst.querySelectorAll('input').forEach(i => i.placeholder = s ? 'https://www.ejemplo.com/*' : 'https://…'); };
+  (urlsDe(a.url).length ? urlsDe(a.url) : ['']).forEach(fila);
+  h.querySelector('#bUrl').onclick = () => { fila('').focus(); marca(); };
+  const pon = () => { const s = esScr(); h.querySelector('#lUrl').textContent = s ? 'Dónde se ejecuta (@match)' : 'URL de la app (opcional)';
+    if (!s) [...lst.children].slice(1).forEach(d => d.remove()); marca(); const z = h.querySelector('#zScr'); if (z) z.hidden = !s; };
   pon(); tipo.onchange = pon;
-  f.onsubmit = async e => { e.preventDefault(); const app = Object.fromEntries(new FormData(f)); if (id) app.id = id; const r = await api('appGuardar', { app }); if (r.ok) { cierra(); toast('Aplicación guardada'); pinta(); } else toast(r.error, true); };
+  f.onsubmit = async e => { e.preventDefault(); f.elements.url.value = [...lst.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean).join(' ');
+    const app = Object.fromEntries(new FormData(f)); if (id) app.id = id; const r = await api('appGuardar', { app }); if (r.ok) { cierra(); toast('Aplicación guardada'); pinta(); } else toast(r.error, true); };
   if (!id) return;
   const t = h.querySelector('#tScr'), listo = () => t.placeholder = '// pega aquí el código del script';
   if (a.tipo === 'script') api('scriptLeer', { id }).then(r => { t.value = r.code || ''; listo(); }); else listo();
