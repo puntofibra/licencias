@@ -345,7 +345,7 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
 // así arranca al instante y no llama al servidor en cada página que abre el cliente.
 const REVISA_H = 3;
 // versión del loader: al subirla, el panel actualiza los enlaces guardados y Tampermonkey se lo baja solo a los clientes
-const LOADER_V = '2.3';
+const LOADER_V = '2.4';
 async function refrescaEnlaces() {
   try {
     if (!D || !D.inst || localStorage.getItem('loader_v') === LOADER_V) return;
@@ -358,9 +358,10 @@ async function refrescaEnlaces() {
   } catch (e) {}
 }
 function loader(l, a) {
+  const ver = LOADER_V + '.' + new Date().toISOString().replace(/\D/g, '').slice(0, 12);
   const m = urlsDe(a.url), gr = ['GM_xmlhttpRequest', 'GM_getValue', 'GM_setValue', 'GM_deleteValue', 'GM_listValues', 'GM_addStyle', 'GM_openInTab', 'GM_setClipboard', 'GM_notification', 'GM_registerMenuCommand', 'unsafeWindow'];
-  return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      ' + LOADER_V + '.' + new Date().toISOString().replace(/\D/g, '').slice(0, 12), '// @description  ' + a.nombre,
-  ...(m.length ? m : ['*://*/*']).map(u => '// @match        ' + u), ...gr.map(g => '// @grant        ' + g),
+  return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      ' + ver, '// @description  ' + a.nombre,
+  ...(m.length ? m : ['*://*/*']).concat(URL_PANEL + 'instalar.html*').map(u => '// @match        ' + u), ...gr.map(g => '// @grant        ' + g),
   '// @connect      script.google.com', '// @connect      script.googleusercontent.com', '// @run-at       document-start', '// ==/UserScript==', ''].join('\n') + String.raw`
 (function () {
   'use strict';
@@ -369,6 +370,12 @@ function loader(l, a) {
   var SIN_RED = 3 * 86400000;         // sin conexión con el servidor, sigue funcionando 3 días
   var NOMBRES = ['${gr.join("', '")}'];
   var VALORES = [${gr.join(', ')}];
+  // en la página de instalación solo avisa de que está instalado en este navegador (y con qué versión); no hace nada más
+  if (location.href.indexOf('${URL_PANEL}instalar.html') === 0) {
+    var marca = function () { try { document.documentElement.setAttribute('data-fm-' + APP, LIC + '|${ver}'); } catch (e) {} };
+    if (document.documentElement) marca(); else document.addEventListener('readystatechange', marca);
+    return;
+  }
   var dev = GM_getValue('lic_dev', '');
   if (!dev) { dev = 'tm-' + Math.random().toString(36).slice(2) + Date.now().toString(36); GM_setValue('lic_dev', dev); }
 
