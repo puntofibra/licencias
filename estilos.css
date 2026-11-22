@@ -213,3 +213,12 @@ main{padding:18px 14px 40px}
 .murl .in{flex:1;min-width:0;font-family:var(--mono);font-size:12.5px}
 .murl .btn{flex:none}
 #lstUrl.una .murl .btn{display:none}
+.mp{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid rgba(125,249,255,.08)}
+.mp .g{flex:1;min-width:200px}
+.mp .g b{display:block;font-weight:600;font-size:13px}
+.mp .g small{display:block;color:var(--sua);font-size:11.5px;line-height:1.45}
+.mp .g small.c-warn{color:var(--warn)}
+.mp .acc{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mp select.in{padding:7px 10px;font-size:12px;max-width:260px}
+.mpos h5{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--sua);margin:16px 0 4px;font-weight:600}
+.mpos h5.c-warn{color:var(--warn)}
