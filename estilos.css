@@ -202,3 +202,10 @@ main{padding:18px 14px 40px}
 .llave .lico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,rgba(61,245,255,.18),rgba(139,92,255,.18));border:1px solid var(--linea)}
 .llave .lico svg{width:18px;height:18px;color:var(--cian)}
 .llave .g small{font-family:var(--mono);letter-spacing:.06em}
+.pick{display:flex;flex-wrap:wrap;gap:7px;max-height:190px;overflow:auto;padding:2px}
+.pick button{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:30px;border:1px solid var(--linea);color:var(--sua);font-size:12.5px;font-weight:600;transition:.2s;background:rgba(5,8,18,.5)}
+.pick button svg{width:15px;height:15px;flex:none}
+.pick button.on{color:#04060e;background:linear-gradient(100deg,var(--cian),var(--vio));border-color:transparent;box-shadow:0 0 18px rgba(61,245,255,.35)}
+#pkInfo{color:var(--cian);font-family:var(--mono);letter-spacing:.1em}
+.packl{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 0;max-height:46px;overflow:hidden}
+.packl i{font-style:normal;font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--linea);color:var(--sua);white-space:nowrap}
