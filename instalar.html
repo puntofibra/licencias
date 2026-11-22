@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070f">
+<meta name="robots" content="noindex">
+<title>Instalación · FuturMovil</title>
+<meta property="og:title" content="Instalación · FuturMovil">
+<meta property="og:description" content="Tu instalación personal de scripts de FuturMovil">
+<meta property="og:image" content="https://puntofibra.github.io/licencias/compartir.jpg">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#05070f;--panel:rgba(16,22,42,.66);--linea:rgba(125,249,255,.14);--txt:#e8eefc;--sua:#8b96b8;--cian:#3df5ff;--vio:#8b5cff;--ok:#2bff9a;--warn:#ffc53d;--mal:#ff4d6d;--disp:'Chakra Petch',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{font-family:'Sora',system-ui,sans-serif;color:var(--txt);min-height:100vh;font-size:15px;line-height:1.55;overflow-x:hidden}
+[hidden]{display:none!important}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--cian);outline-offset:3px}
+.aurora{position:fixed;inset:-20%;z-index:-2;pointer-events:none;filter:blur(90px);opacity:.5;
+background:radial-gradient(40% 35% at 20% 20%,rgba(139,92,255,.55),transparent 70%),radial-gradient(35% 30% at 85% 15%,rgba(61,245,255,.35),transparent 70%),radial-gradient(40% 40% at 60% 95%,rgba(43,255,154,.16),transparent 70%);animation:aur 22s ease-in-out infinite alternate}
+@keyframes aur{to{transform:translate3d(4%,-3%,0) rotate(8deg) scale(1.1)}}
+.rej{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.35;background-image:linear-gradient(var(--linea) 1px,transparent 1px),linear-gradient(90deg,var(--linea) 1px,transparent 1px);background-size:44px 44px;
+mask-image:radial-gradient(ellipse at 50% 20%,#000 10%,transparent 75%);-webkit-mask-image:radial-gradient(ellipse at 50% 20%,#000 10%,transparent 75%)}
+.wrap{width:min(640px,100%);margin:0 auto;padding:28px 18px 40px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:22px;animation:sube .6s both}
+.logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(61,245,255,.16),rgba(139,92,255,.16));border:1px solid var(--linea);box-shadow:0 0 24px rgba(61,245,255,.18)}
+.logo svg{width:24px;height:24px}
+.marca{font-family:var(--disp);font-weight:700;letter-spacing:.18em;font-size:17px}
+.marca small{display:block;font-family:'Sora';font-weight:500;letter-spacing:.06em;font-size:11.5px;color:var(--sua)}
+.seg{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ok);border:1px solid rgba(43,255,154,.3);background:rgba(43,255,154,.07);padding:5px 10px;border-radius:99px;white-space:nowrap}
+.seg svg{width:13px;height:13px}
+.card{position:relative;background:var(--panel);border:1px solid var(--linea);border-radius:26px;padding:30px 26px 24px;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);animation:sube .7s .05s both}
+.card::before{content:'';position:absolute;inset:-1px;border-radius:26px;padding:1px;background:conic-gradient(from var(--a,0deg),transparent 0 70%,var(--cian),var(--vio),transparent 95%);
+-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:gira 6s linear infinite;pointer-events:none}
+@property --a{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes gira{to{--a:360deg}}
+@keyframes sube{from{opacity:0;transform:translateY(14px)}}
+.hola{color:var(--sua);font-size:14px}
+.hola b{color:var(--txt);font-weight:600}
+h1{font-family:var(--disp);font-size:clamp(26px,6vw,34px);line-height:1.15;margin:4px 0 8px;letter-spacing:.01em}
+h1 span{background:linear-gradient(90deg,var(--cian),var(--vio));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--sua);margin-bottom:20px}
+.movil{display:flex;gap:10px;align-items:flex-start;background:rgba(255,197,61,.08);border:1px solid rgba(255,197,61,.35);color:#ffe2a0;border-radius:16px;padding:12px 14px;margin-bottom:18px;font-size:13.5px}
+.movil svg{flex:0 0 20px;height:20px;color:var(--warn)}
+.pasos{list-style:none;display:grid;gap:14px}
+.paso{display:grid;grid-template-columns:38px 1fr;gap:14px;padding:16px;border-radius:20px;border:1px solid var(--linea);background:rgba(5,8,18,.45);transition:border-color .3s,box-shadow .3s,opacity .3s}
+.paso.act{border-color:rgba(61,245,255,.45);box-shadow:0 0 0 1px rgba(61,245,255,.15),0 10px 40px rgba(61,245,255,.08)}
+.paso.ok{opacity:.72}
+.num{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-family:var(--disp);font-weight:700;font-size:17px;color:var(--cian);background:rgba(61,245,255,.08);border:1px solid rgba(61,245,255,.3)}
+.paso.ok .num{color:#04130b;background:var(--ok);border-color:var(--ok);font-size:0}
+.paso.ok .num::after{content:'';width:14px;height:8px;border:solid #04130b;border-width:0 0 3px 3px;transform:translateY(-2px) rotate(-45deg)}
+.paso h2{font-family:var(--disp);font-size:18px;font-weight:600;letter-spacing:.02em;margin:6px 0 4px}
+.paso p{color:var(--sua);font-size:13.5px}
+.paso p b{color:var(--txt);font-weight:600}
+.acc{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:13px;font-weight:600;font-size:14px;border:1px solid var(--linea);background:rgba(255,255,255,.04);transition:transform .15s,box-shadow .2s,background .2s,border-color .2s;white-space:nowrap}
+.btn:hover{transform:translateY(-1px);border-color:rgba(61,245,255,.4)}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:17px;height:17px}
+.pri{border:0;color:#03121a;background:linear-gradient(135deg,var(--cian),#7aa7ff 55%,var(--vio));box-shadow:0 8px 28px rgba(61,245,255,.3)}
+.pri:hover{box-shadow:0 10px 34px rgba(61,245,255,.45)}
+.lnk{color:var(--cian);font-size:13.5px;font-weight:600;padding:6px 2px}
+.lnk:hover{text-decoration:underline}
+.scripts{display:grid;gap:8px;margin-top:12px}
+.scr{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:10px 10px 10px 12px;border-radius:15px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);transition:border-color .3s,background .3s}
+.scr .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(139,92,255,.14);color:#c4b0ff}
+.scr .ico svg{width:17px;height:17px}
+.scr .nm{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scr .nm small{display:block;font-weight:400;color:var(--sua);font-size:12px}
+.scr .btn{height:38px;padding:0 15px;font-size:13px}
+.scr.hecho{border-color:rgba(43,255,154,.3);background:rgba(43,255,154,.05)}
+.scr.hecho .ico{background:rgba(43,255,154,.14);color:var(--ok)}
+.scr.hecho .btn{background:transparent;color:var(--ok);border:1px solid rgba(43,255,154,.35);box-shadow:none}
+.prog{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:12.5px;color:var(--sua)}
+.barra{flex:1;height:6px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden}
+.barra i{display:block;height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,var(--cian),var(--ok));transition:width .5s cubic-bezier(.2,.9,.2,1)}
+.mock{margin-top:12px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:#0b0f1d;overflow:hidden;font-size:12px}
+.mock .tb{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#121a30;color:var(--sua)}
+.mock .tb i{width:8px;height:8px;border-radius:50%;background:#2a3557}
+.mock .bd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px}
+.mock .bd span{color:var(--sua)}
+.mock .bd b{display:inline-flex;align-items:center;height:30px;padding:0 14px;border-radius:7px;background:#2e7d32;color:#fff;font-weight:600;position:relative}
+.mock .bd b::after{content:'';position:absolute;inset:-5px;border-radius:10px;border:2px solid var(--cian);animation:pulso 1.6s ease-out infinite}
+@keyframes pulso{from{opacity:1;transform:scale(.9)}to{opacity:0;transform:scale(1.25)}}
+details.ayuda{margin-top:18px;border-radius:18px;border:1px solid var(--linea);background:rgba(5,8,18,.35)}
+details.ayuda summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px;font-weight:600;font-size:14px}
+details.ayuda summary::-webkit-details-marker{display:none}
+details.ayuda summary svg{width:18px;height:18px;color:var(--cian)}
+details.ayuda summary::after{content:'';margin-left:auto;width:8px;height:8px;border:solid var(--sua);border-width:0 2px 2px 0;transform:rotate(45deg);transition:transform .2s}
+details.ayuda[open] summary::after{transform:rotate(-135deg)}
+.ayc{padding:0 16px 16px;color:var(--sua);font-size:13.5px;display:grid;gap:12px}
+.ayc ol{padding-left:20px;display:grid;gap:6px}
+.ayc b{color:var(--txt);font-weight:600}
+.kbd{display:inline-flex;align-items:center;gap:6px;font-family:ui-monospace,monospace;font-size:12.5px;color:var(--txt);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:2px 4px 2px 8px}
+.kbd button{font-size:11px;font-family:'Sora';font-weight:600;color:var(--cian);padding:2px 6px;border-radius:6px;background:rgba(61,245,255,.1)}
+.wa{display:flex;align-items:center;gap:12px;margin-top:14px;padding:14px 16px;border-radius:18px;border:1px solid rgba(43,255,154,.25);background:rgba(43,255,154,.06);transition:background .2s}
+.wa:hover{background:rgba(43,255,154,.11)}
+.wa svg{width:26px;height:26px;color:var(--ok);flex:0 0 26px}
+.wa b{display:block;font-size:14px}
+.wa small{color:var(--sua);font-size:12.5px}
+footer{text-align:center;color:var(--sua);font-size:12px;margin-top:22px;display:grid;gap:4px}
+footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
+.esq{height:14px;border-radius:8px;background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.12),rgba(255,255,255,.05));background-size:200% 100%;animation:brillo 1.2s linear infinite;margin:10px 0}
+@keyframes brillo{to{background-position:-200% 0}}
+.error{text-align:center;padding:10px 0}
+.error .ic{width:64px;height:64px;margin:0 auto 14px;border-radius:20px;display:grid;place-items:center;background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.35);color:var(--mal)}
+.error .ic svg{width:30px;height:30px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#101833;border:1px solid var(--linea);padding:10px 16px;border-radius:12px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:sube .3s both}
+@media (max-width:520px){.card{padding:24px 16px 18px}.paso{grid-template-columns:1fr;gap:8px}.seg{display:none}.scr .nm small{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="aurora"></div><div class="rej"></div>
+<div class="wrap">
+  <header>
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#3df5ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4 5.5v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10v-6z"/><path d="m8.5 12 2.4 2.4 4.6-4.8"/></svg></div>
+    <div class="marca">FUTURMOVIL<small>Instalación de scripts</small></div>
+    <div class="seg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Enlace personal</div>
+  </header>
+  <main class="card" id="card">
+    <div class="esq" style="width:30%"></div><div class="esq" style="width:70%;height:30px"></div><div class="esq" style="width:90%"></div><div class="esq" style="width:100%;height:90px;border-radius:18px"></div><div class="esq" style="width:100%;height:90px;border-radius:18px"></div>
+  </main>
+  <footer>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Este enlace es personal y va ligado a tu licencia. No lo compartas.</div>
+    <div>© FuturMovil</div>
+  </footer>
+</div>
+<script src="config.js"></script>
+<script>
+(function () {
+  const API = window.LICENCIAS_API;
+  const TIENDA = 'https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo';
+  const k = new URLSearchParams(location.search).get('k') || '';
+  const card = document.getElementById('card');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const limpia = n => String(n).replace(/^\s*\d+\s*[-–·.]\s*/, '');
+  const ICO = {
+    tm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>',
+    ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+    scr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg>',
+    ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+    help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 0 1 5 1c0 1.8-2.5 2.2-2.5 3.8M12 17.5v.01"/></svg>',
+    wa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5 5 16a8.5 8.5 0 1 1 3.3 3.2z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5"/></svg>',
+    pc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.01"/><path d="M10.3 3.9 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>'
+  };
+  const waLink = (num, txt) => { let n = String(num || '').replace(/\D/g, ''); if (n.length === 9) n = '34' + n; return n ? 'https://wa.me/' + n + '?text=' + encodeURIComponent(txt) : ''; };
+  function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
+  function error(msg, sop) {
+    const w = waLink(sop || '34633200100', 'Hola, mi enlace de instalación de FuturMovil no funciona.');
+    card.innerHTML = `<div class="error"><div class="ic">${ICO.x}</div><h1 style="font-size:24px">Enlace no disponible</h1><p class="lead" style="margin-bottom:6px">${esc(msg)}</p></div>
+      <a class="wa" href="${w}" target="_blank" rel="noopener">${ICO.wa}<div><b>Pide un enlace nuevo por WhatsApp</b><small>Te respondemos enseguida.</small></div></a>`;
+  }
+  if (!k || !API) return error('Este enlace está incompleto. Pide a FuturMovil que te lo envíe de nuevo.');
+
+  const clave = 'fm_inst_' + k;
+  let hechos = {}; try { hechos = JSON.parse(localStorage.getItem(clave) || '{}'); } catch (e) {}
+  const guarda = () => { try { localStorage.setItem(clave, JSON.stringify(hechos)); } catch (e) {} };
+
+  fetch(API + '?a=instInfo&t=' + encodeURIComponent(k), { redirect: 'follow' }).then(r => r.json()).then(r => {
+    if (!r || !r.ok || !r.lista || !r.lista.length) return error('Este enlace ya no es válido o ha caducado.', r && r.soporte);
+    pinta(r);
+  }).catch(() => error('No hemos podido conectar con el servidor. Revisa tu conexión y vuelve a cargar la página.'));
+
+  function pinta(r) {
+    const n = r.lista.length, uno = n === 1;
+    const movil = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const nombre = String(r.cliente || '').trim().split(/\s+/)[0];
+    const sop = waLink(r.soporte, 'Hola' + (nombre ? ', soy ' + nombre : '') + '. Necesito ayuda para instalar mis scripts de FuturMovil.');
+    document.title = (uno ? limpia(r.lista[0].nombre) : 'Tus scripts') + ' · Instalación FuturMovil';
+    card.innerHTML = `
+      <div class="hola">${nombre ? `Hola, <b>${esc(nombre)}</b> 👋` : 'Hola 👋'}</div>
+      <h1>${uno ? `Instala <span>${esc(limpia(r.lista[0].nombre))}</span>` : `Instala tus <span>${n} scripts</span>`}</h1>
+      <p class="lead">Es muy sencillo: tres pasos y menos de un minuto. Hazlo desde el <b style="color:var(--txt)">ordenador</b>, con <b style="color:var(--txt)">Google Chrome</b>.</p>
+      ${movil ? `<div class="movil">${ICO.pc}<div><b>Ábrelo en el ordenador.</b> Estás en un móvil, y los scripts funcionan en Chrome de ordenador. Envíate este enlace por correo o WhatsApp y ábrelo allí.</div></div>` : ''}
+      <ol class="pasos">
+        <li class="paso act" id="p1"><div class="num">1</div><div>
+          <h2>Añade Tampermonkey a Chrome</h2>
+          <p>Es la extensión gratuita que hace funcionar tus scripts. <b>Si ya la tienes instalada, pasa al paso 2.</b></p>
+          <div class="acc"><a class="btn" href="${TIENDA}" target="_blank" rel="noopener" id="bTienda">${ICO.ext}Instalar Tampermonkey</a><button class="lnk" id="bYa">Ya lo tengo →</button></div>
+        </div></li>
+        <li class="paso" id="p2"><div class="num">2</div><div>
+          <h2>${uno ? 'Instala tu script' : 'Instala tus scripts'}</h2>
+          <p>${uno ? 'Pulsa el botón y se abrirá Tampermonkey.' : 'Pulsa <b>Instalar</b> en cada uno, de uno en uno. Cada botón abre Tampermonkey.'}</p>
+          <div class="scripts">${r.lista.map((s, i) => `<div class="scr" data-i="${i}"><div class="ico">${ICO.scr}</div><div class="nm" title="${esc(s.nombre)}">${esc(limpia(s.nombre))}<small>Script de Tampermonkey</small></div><a class="btn pri" href="${esc(API + '/' + s.archivo)}" target="_blank" rel="noopener" data-i="${i}">${ICO.tm}Instalar</a></div>`).join('')}</div>
+          ${uno ? '' : `<div class="prog"><div class="barra"><i id="barra"></i></div><span id="cuenta">0 de ${n}</span></div>`}
+        </div></li>
+        <li class="paso" id="p3"><div class="num">3</div><div>
+          <h2>Confirma en Tampermonkey</h2>
+          <p>En la pestaña que se abre, pulsa el botón <b>Instalar</b>${uno ? '' : ' (una vez por cada script)'}. Después, <b>recarga la página</b> donde usas el script y listo.</p>
+          <div class="mock"><div class="tb"><i></i><i></i><i></i>&nbsp;Tampermonkey</div><div class="bd"><span>${esc(limpia(r.lista[0].nombre))}</span><b>Instalar</b></div></div>
+        </div></li>
+      </ol>
+      <details class="ayuda" id="ayuda"><summary>${ICO.help}¿No se abre la pantalla de Tampermonkey?</summary><div class="ayc">
+        <ol>
+          <li>Comprueba que estás en <b>Google Chrome</b> en el ordenador y que Tampermonkey está instalado (paso 1).</li>
+          <li>Escribe esta dirección en la barra de Chrome: <span class="kbd">chrome://extensions<button id="bCopia">Copiar</button></span></li>
+          <li>En Tampermonkey, pulsa <b>Detalles</b> y activa <b>«Permitir scripts de usuario»</b>. Si no aparece, activa el <b>Modo de desarrollador</b> (arriba a la derecha).</li>
+          <li>Vuelve aquí y pulsa <b>Instalar</b> otra vez.</li>
+        </ol>
+        <div>Si en vez de la pantalla de instalación ves un texto con código, es que Tampermonkey no está activo: repite estos pasos.</div>
+      </div></details>
+      ${sop ? `<a class="wa" href="${sop}" target="_blank" rel="noopener">${ICO.wa}<div><b>¿Necesitas ayuda?</b><small>Escríbenos por WhatsApp y te guiamos paso a paso.</small></div></a>` : ''}`;
+
+    const $ = s => card.querySelector(s);
+    const p1 = $('#p1'), p2 = $('#p2'), p3 = $('#p3');
+    const paso2 = () => { p1.classList.remove('act'); p1.classList.add('ok'); p2.classList.add('act'); };
+    $('#bYa').onclick = () => { paso2(); p2.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+    $('#bTienda').onclick = () => setTimeout(paso2, 800);
+    $('#bCopia').onclick = async () => { try { await navigator.clipboard.writeText('chrome://extensions'); toast('Dirección copiada'); } catch (e) { toast('Escribe: chrome://extensions'); } };
+    let aviso = null;
+    const refresca = () => {
+      const c = Object.keys(hechos).filter(i => i < n).length;
+      card.querySelectorAll('.scr').forEach(el => {
+        const h = !!hechos[el.dataset.i]; el.classList.toggle('hecho', h);
+        el.querySelector('.btn').innerHTML = h ? ICO.ok + 'Instalado' : ICO.tm + 'Instalar';
+        el.querySelector('.btn').title = h ? 'Pulsa otra vez si necesitas reinstalarlo' : '';
+      });
+      if ($('#barra')) { $('#barra').style.width = (c / n * 100) + '%'; $('#cuenta').textContent = c + ' de ' + n; }
+      if (c) { paso2(); p3.classList.add('act'); }
+      if (c >= n) { p2.classList.remove('act'); p2.classList.add('ok'); }
+    };
+    card.querySelectorAll('.scr .btn').forEach(b => b.addEventListener('click', () => {
+      hechos[b.dataset.i] = 1; guarda(); setTimeout(refresca, 400);
+      clearTimeout(aviso);
+      aviso = setTimeout(() => { if (document.hasFocus()) { const a = $('#ayuda'); if (a && !a.open) { a.open = true; toast('¿No se ha abierto Tampermonkey? Mira la ayuda'); } } }, 6000);
+    }));
+    window.addEventListener('blur', () => clearTimeout(aviso));
+    refresca();
+  }
+})();
+</script>
+</body>
+</html>
