@@ -419,9 +419,18 @@ function editaApp(id) {
   f.onsubmit = async e => { e.preventDefault(); f.elements.url.value = [...lst.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean).join(' ');
     const app = Object.fromEntries(new FormData(f)); if (id) app.id = id; const r = await api('appGuardar', { app }); if (r.ok) { cierra(); toast('Aplicación guardada'); pinta(); } else toast(r.error, true); };
   if (!id) return;
-  const t = h.querySelector('#tScr'), listo = () => t.placeholder = '// pega aquí el código del script';
-  if (a.tipo === 'script') api('scriptLeer', { id }).then(r => { t.value = r.code || ''; listo(); }); else listo();
-  h.querySelector('#bScr').onclick = async () => { const r = await api('scriptGuardar', { id, code:t.value }); if (r.ok) { toast('Código subido'); pinta(); } else toast(r.error, true); };
+  const t = h.querySelector('#tScr'), bS = h.querySelector('#bScr');
+  // mientras se carga el código guardado no se puede pegar, para que la carga no borre lo que pegas
+  const listo = () => { t.readOnly = false; bS.disabled = false; t.placeholder = '// pega aquí el código del script'; };
+  t.readOnly = true; bS.disabled = true;
+  if (a.tipo === 'script') api('scriptLeer', { id }).then(r => { if (!t.value) t.value = r.code || ''; listo(); }).catch(listo); else listo();
+  bS.onclick = async () => { const code = t.value;
+    if (!code.trim()) return toast('Pega primero el código del script', true);
+    bS.disabled = true; bS.textContent = 'Subiendo…';
+    const r = await api('scriptGuardar', { id, code });
+    bS.disabled = false; bS.textContent = 'Subir código';
+    if (r.ok && D.scripts[id] === code.length) { toast('Código subido (' + code.length.toLocaleString('es-ES') + ' caracteres)'); modal.sucio = false; pinta(); }
+    else toast(r.ok ? 'No se ha guardado entero. Vuelve a darle a Subir código' : (r.error || 'No se ha podido subir'), true); };
   h.querySelector('#aDel').onclick = async () => { if (await confirma('Eliminar aplicación', 'Se borrará ' + a.nombre + ' del panel.')) { const r = await api('appBorrar', { id }); if (r.ok) { toast('Aplicación eliminada'); pinta(); } else toast(r.error, true); } };
 }
 
