@@ -1,7 +1,6 @@
 'use strict';
 const API = window.LICENCIAS_API || '';
 const URL_PANEL = 'https://puntofibra.github.io/licencias/';
-const USUARIO = 'admin';   // nombre con el que Google Contraseñas guarda la clave del panel
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 let TOKEN = localStorage.getItem('lic_token') || '';
@@ -87,7 +86,12 @@ function baja(nombre, txt) { const a = document.createElement('a'); a.href = URL
 const eur = n => (Math.round((+n || 0) * 100) / 100).toLocaleString('es-ES', { minimumFractionDigits:(+n % 1) ? 2 : 0, maximumFractionDigits:2 }) + ' €';
 const fecha = f => f ? f.slice(0, 10).split('-').reverse().join('/') : '—';
 const num = (v, d) => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? d : n; };
-const appDe = id => D.apps.find(a => a.id === id) || { id, nombre:id, tipo:'web', precio:0, url:'' };
+const idsDe = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+const app1 = id => D.apps.find(a => a.id === id) || { id, nombre:id, tipo:'web', precio:0, url:'' };
+// una licencia puede ser de una app o un pack (varias apps con un solo pago y vencimiento)
+const appDe = v => { const ids = idsDe(v); if (ids.length < 2) return app1(ids[0] || ''); const as = ids.map(app1);
+  return { id:ids.join(','), nombre:'Pack · ' + ids.length + ' apps', tipo:'pack', precio:as.reduce((t, a) => t + num(a.precio, 0), 0), url:'', pack:as }; };
+const dispN = l => { const ds = D.disp.filter(d => d.codigo === l.codigo), ids = idsDe(l.app); return ids.length < 2 ? ds.length : Math.max(0, ...ids.map(i => ds.filter(d => d.app === i).length)); };
 const maxDe = l => num(l.maxDisp, num(D.cfg.maxDisp, 0));
 function estadoDe(l) {
   if (l.ef === 'bloqueada') return { k:'bloqueadas', t:'Bloqueada', c:'c-mal', col:'var(--mal)' };
@@ -103,33 +107,30 @@ function waCliente(l) { let t = String(l.telefono || '').replace(/\D/g, ''); if 
   return 'https://wa.me/' + t + '?text=' + encodeURIComponent(txt); }
 
 /* ---------- login ---------- */
-let modoLogin = 'pass', cfgInfo = { configurado:true, totp:false };
+let cfgInfo = { totp:false };
 async function verLogin() {
   $('#app').hidden = true; $('#login').hidden = false;
   if (!API) { $('#lgCuerpo').innerHTML = '<p class="err">Falta configurar la URL del servidor en config.js</p>'; return; }
   $('#lgCuerpo').innerHTML = '<p class="sub">Conectando…</p>';
-  const r = await api('info'); if (r.ok) { cfgInfo = r; if (r.totp) modoLogin = 'totp'; }
+  const r = await api('info'); if (r.ok) cfgInfo = r;
   pintaLogin();
 }
 function pintaLogin() {
-  const nuevo = !cfgInfo.configurado, tt = modoLogin === 'totp';
-  $('#lgCuerpo').innerHTML = `<form id="fLogin" autocomplete="on">
-    <input class="oculto" type="text" name="username" autocomplete="username" value="${USUARIO}" readonly tabindex="-1">
-    <div class="campo">${nuevo ? '<label>Crea tu contraseña de administrador</label>' : ''}
-    ${tt ? '<input class="in codigo6" id="lgCod" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Código de 6 dígitos">'
-         : `<input class="in" id="lgPass" type="password" name="password" autocomplete="${nuevo ? 'new-password' : 'current-password'}" placeholder="Contraseña">`}</div>
+  const tt = !!cfgInfo.totp;
+  $('#lgCuerpo').innerHTML = `<form id="fLogin" autocomplete="off">
+    ${tt ? '<div class="campo"><input class="in codigo6" id="lgCod" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Código de 6 dígitos"></div>' : `<div class="cen">${NFC_HTML}</div>`}
     <div class="err" id="lgErr"></div>
-    <button class="btn pri w" id="bEntrar" type="submit">${nuevo ? 'CREAR Y ENTRAR' : 'ENTRAR'}<span class="hold"></span></button>
+    <button class="btn pri w" id="bEntrar" type="submit">${tt ? 'ENTRAR' : 'USAR LLAVE NFC'}<span class="hold"></span></button>
     </form>
-    ${nuevo ? '' : `<button class="enl" id="lgCambia">${tt ? 'Entrar con contraseña' : 'Entrar con Google Authenticator'}</button><br><span style="font-size:10.5px;color:var(--sua);display:inline-block;margin-top:10px">Mantén pulsado ENTRAR 3 s para usar la llave NFC</span>`}`;
+    <span style="font-size:10.5px;color:var(--sua);display:inline-block;margin-top:14px">${tt ? 'Código de Google Authenticator · mantén pulsado ENTRAR 3 s para usar la llave NFC' : 'Entra con tu llave NFC'}</span>`;
   const f = $('#fLogin'), b = $('#bEntrar'); let timer = null, largo = false;
-  if ($('#lgCambia')) $('#lgCambia').onclick = () => { modoLogin = tt ? 'pass' : 'totp'; pintaLogin(); };
   const suelta = () => { clearTimeout(timer); b.classList.remove('aguanta'); };
-  if (!nuevo) { b.onpointerdown = () => { largo = false; b.classList.add('aguanta'); timer = setTimeout(() => { largo = true; suelta(); if (navigator.vibrate) navigator.vibrate(60); abrirLlave(); }, 3000); };
+  if (tt) { b.onpointerdown = () => { largo = false; b.classList.add('aguanta'); timer = setTimeout(() => { largo = true; suelta(); if (navigator.vibrate) navigator.vibrate(60); abrirLlave(); }, 3000); };
     b.onpointerup = b.onpointerleave = b.onpointercancel = suelta; b.oncontextmenu = e => e.preventDefault(); }
   f.onsubmit = async e => { e.preventDefault(); if (largo) { largo = false; return; }
-    const v = tt ? $('#lgCod').value : $('#lgPass').value; if (!v) return;
-    b.disabled = true; const r = await api(nuevo ? 'setup' : 'login', tt ? { totp:v } : { pass:v }); b.disabled = false;
+    if (!tt) return abrirLlave();
+    const v = $('#lgCod').value.trim(); if (!v) return;
+    b.disabled = true; const r = await api('login', { totp:v }); b.disabled = false;
     if (r.ok) entrar(r.t); else { $('#lgErr').textContent = r.error || 'No se pudo entrar'; bip(200); $('.caja').animate([{ transform:'translateX(0)' }, { transform:'translateX(-9px)' }, { transform:'translateX(9px)' }, { transform:'translateX(0)' }], { duration:300 }); } };
 }
 async function entrar(t) { TOKEN = t; localStorage.setItem('lic_token', t); bip(660); setTimeout(() => bip(990), 90); const r = await api('datos'); if (r.ok) { $('#login').hidden = true; $('#app').hidden = false; ir('inicio'); } else verLogin(); }
@@ -224,7 +225,7 @@ function filaLog(g) { const l = D.lics.find(x => x.codigo === g.codigo), malo = 
 function vLics() {
   const cuentas = { todas:D.lics.length, activas:0, vencer:0, vencidas:0, bloqueadas:0 }; D.lics.forEach(l => cuentas[estadoDe(l).k]++);
   const q = busca.toLowerCase();
-  const lista = D.lics.filter(l => (filtro === 'todas' || estadoDe(l).k === filtro) && (!fApp || l.app === fApp) && (!q || (l.cliente + ' ' + l.codigo + ' ' + l.telefono + ' ' + l.email + ' ' + appDe(l.app).nombre).toLowerCase().includes(q)))
+  const lista = D.lics.filter(l => (filtro === 'todas' || estadoDe(l).k === filtro) && (!fApp || idsDe(l.app).includes(fApp)) && (!q || (l.cliente + ' ' + l.codigo + ' ' + l.telefono + ' ' + l.email + ' ' + appDe(l.app).nombre + ' ' + idsDe(l.app).map(i => app1(i).nombre).join(' ')).toLowerCase().includes(q)))
     .sort((a, b) => (a.vence || '9999').localeCompare(b.vence || '9999'));
   $('#main').innerHTML = `<div class="vista">${cab('LICENCIAS', '', bNueva('bNueva'))}
   <div class="barra"><input class="in" id="iBusca" placeholder="Buscar cliente, código, teléfono…" value="${esc(busca)}"><select class="in" id="sApp"><option value="">Todas las apps</option>${D.apps.map(a => `<option value="${a.id}" ${fApp === a.id ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('')}</select></div>
@@ -242,10 +243,10 @@ function vLics() {
     if (e.target.closest('a')) return;
     ficha(k); });
 }
-function tarjetaLic(l, i) { const e = estadoDe(l), a = appDe(l.app), nd = D.disp.filter(d => d.codigo === l.codigo).length, mx = maxDe(l);
+function tarjetaLic(l, i) { const e = estadoDe(l), a = appDe(l.app), nd = dispN(l), mx = maxDe(l);
   return `<div class="card lic tilt st" style="--i:${Math.min(i, 14)};--col:${e.col}" data-k="${l.codigo}"><div class="brillo"></div>
   <div class="top"><div><h4>${esc(l.cliente)}</h4><span class="ap">${esc(a.nombre)}</span></div><span class="chip ${e.c}"><i class="pt"></i>${e.t}</span></div>
-  <button class="cod"><span>${l.codigo}</span>${ic('copia')}</button>
+  ${a.pack ? `<div class="packl">${a.pack.map(x => `<i>${esc(x.nombre)}</i>`).join('')}</div>` : ''}<button class="cod"><span>${l.codigo}</span>${ic('copia')}</button>
   <div class="meta"><span>Vence <b>${l.vence ? fecha(l.vence) : 'nunca'}</b></span><span><b>${eur(l.precio)}</b>/mes</span><span>Disp. <b>${nd}${mx ? '/' + mx : ''}</b></span></div>
   <div class="acc"><button class="sw ${l.estado !== 'bloqueada' ? 'on' : ''}" title="Activar / bloquear"></button><span class="sp"></span>
   ${l.telefono ? `<a class="btn min" href="${waCliente(l)}" target="_blank" rel="noopener" title="WhatsApp">${ic('wa')}</a>` : ''}<button class="btn min ok bRen">${ic('rec')}+1 mes</button></div></div>`; }
@@ -256,7 +257,8 @@ function editaLic(k) {
   const l = k ? D.lics.find(x => x.codigo === k) : { app:fApp || D.apps[0].id, cliente:'', telefono:'', email:'', precio:'', vence:'', maxDisp:'', gracia:'', notas:'' };
   const d1 = new Date(); d1.setMonth(d1.getMonth() + 1); const def = d1.getFullYear() + '-' + String(d1.getMonth() + 1).padStart(2, '0') + '-' + String(d1.getDate()).padStart(2, '0');
   const h = modal(`<h3>${k ? 'Editar licencia' : 'Nueva licencia'}<button class="x">✕</button></h3><p class="ds">${k ? 'Código ' + k : 'El código se genera solo al guardar.'}</p>
-  <form id="fLic"><div class="campo"><label>Aplicación</label><select class="in" name="app">${D.apps.map(a => `<option value="${a.id}" ${l.app === a.id ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('')}</select></div>
+  <form id="fLic"><div class="campo"><label>Aplicaciones <b id="pkInfo"></b></label><div class="pick" id="pkApps">${D.apps.map(a => `<button type="button" data-id="${a.id}">${ic(a.tipo === 'script' ? 'scr' : 'web')}${esc(a.nombre)}</button>`).join('')}</div>
+  <p class="ds" style="margin:8px 0 0">Marca una sola, o varias para hacer un <b>pack</b>: un único pago y vencimiento para todas; si no paga se bloquean todas a la vez.</p><input type="hidden" name="app"></div>
   <div class="campo"><label>Cliente</label><input class="in" name="cliente" value="${esc(l.cliente)}" required placeholder="Nombre del cliente"></div>
   <div class="par"><div class="campo"><label>Teléfono</label><input class="in" name="telefono" inputmode="tel" value="${esc(l.telefono)}"></div><div class="campo"><label>Correo</label><input class="in" name="email" type="email" value="${esc(l.email)}"></div></div>
   <div class="par"><div class="campo"><label>Mensualidad (€)</label><input class="in" name="precio" inputmode="decimal" value="${esc(l.precio)}"></div><div class="campo"><label>Vence el</label><input class="in" name="vence" type="date" value="${esc(k ? l.vence : def)}"></div></div>
@@ -264,9 +266,12 @@ function editaLic(k) {
   <div class="campo"><label>Notas</label><input class="in" name="notas" value="${esc(l.notas)}"></div>
   <p class="ds" style="margin:0 0 12px">Sin fecha de vencimiento la licencia no caduca nunca. Dispositivos a 0 = sin límite.</p>
   <button class="btn pri w" type="submit">GUARDAR</button></form>`);
-  const f = h.querySelector('#fLic'), sel = f.elements.app;
-  if (!k) { const pon = () => f.elements.precio.value = appDe(sel.value).precio || ''; pon(); sel.onchange = pon; }
-  f.onsubmit = async e => { e.preventDefault(); const lic = Object.fromEntries(new FormData(f)); if (k) lic.codigo = k;
+  const f = h.querySelector('#fLic'); let sel = idsDe(l.app).filter(i => D.apps.some(a => a.id === i)), tocado = !!k;
+  const pon = () => { f.elements.app.value = sel.join(','); h.querySelectorAll('#pkApps button').forEach(b => b.classList.toggle('on', sel.includes(b.dataset.id)));
+    h.querySelector('#pkInfo').textContent = sel.length > 1 ? '· PACK DE ' + sel.length : ''; if (!tocado) f.elements.precio.value = appDe(sel.join(',')).precio || ''; };
+  h.querySelectorAll('#pkApps button').forEach(b => b.onclick = () => { const id = b.dataset.id; sel = sel.includes(id) ? sel.filter(x => x !== id) : sel.concat(id); bip(520, .04); pon(); });
+  f.elements.precio.oninput = () => { tocado = true; }; pon();
+  f.onsubmit = async e => { e.preventDefault(); const lic = Object.fromEntries(new FormData(f)); if (k) lic.codigo = k; if (!sel.length) return toast('Elige al menos una aplicación', true);
     const r = await api('licGuardar', { lic }); if (r.ok) { cierra(); toast(k ? 'Licencia guardada' : 'Licencia creada'); vista = 'licencias'; pinta(); if (!k) ficha(r.codigo); } else toast(r.error, true); };
 }
 
@@ -277,9 +282,9 @@ function ficha(k) {
   <button class="cod" id="fCod"><span>${k}</span>${ic('copia')}</button>
   <h5>Renovar (apunta el pago)</h5><div class="bts"><button class="btn ok" data-m="1">+1 mes</button><button class="btn ok" data-m="3">+3 meses</button><button class="btn ok" data-m="12">+1 año</button></div>
   <h5>Acciones</h5><div class="bts"><button class="btn ${blo ? 'ok' : 'mal'}" id="fBlo">${blo ? 'Activar' : 'Bloquear'}</button>${l.telefono ? `<a class="btn" href="${waCliente(l)}" target="_blank" rel="noopener">${ic('wa')}WhatsApp</a>` : ''}<button class="btn" id="fCobro">${ic('pagos')}Enlace de pago</button><button class="btn" id="fEd">Editar</button></div>
-  <h5>Instalación</h5><div class="bts"><button class="btn" id="fInst">${ic(a.tipo === 'script' ? 'scr' : 'web')}${a.tipo === 'script' ? 'Generar loader de Tampermonkey' : 'Ver código de integración'}</button></div>
-  <h5>Dispositivos (${ds.length}${mx ? '/' + mx : ''})</h5>
-  ${ds.length ? ds.map(d => `<div class="fila"><div class="g"><b>${esc(nombreDisp(d.info))}</b><small>Desde ${fecha(d.primero)} · último ${fecha(d.ultimo)} ${d.ultimo.slice(11, 16)}</small></div><button class="btn min mal" data-d="${esc(d.disp)}">Liberar</button></div>`).join('') : '<p class="ds" style="margin:0">Ningún dispositivo registrado todavía.</p>'}
+  <h5>Instalación${a.pack ? ' · una por cada app del pack' : ''}</h5><div class="bts">${(a.pack || [a]).map(x => `<button class="btn" data-ins="${esc(x.id)}">${ic(x.tipo === 'script' ? 'scr' : 'web')}${a.pack ? esc(x.nombre) : x.tipo === 'script' ? 'Generar loader de Tampermonkey' : 'Ver código de integración'}</button>`).join('')}</div>
+  <h5>Dispositivos (${a.pack ? ds.length + (mx ? ' · máx. ' + mx + ' por app' : '') : ds.length + (mx ? '/' + mx : '')})</h5>
+  ${ds.length ? ds.map(d => `<div class="fila"><div class="g"><b>${esc(nombreDisp(d.info))}</b><small>${a.pack && d.app ? esc(app1(d.app).nombre) + ' · ' : ''}Desde ${fecha(d.primero)} · último ${fecha(d.ultimo)} ${d.ultimo.slice(11, 16)}</small></div><button class="btn min mal" data-d="${esc(d.disp)}">Liberar</button></div>`).join('') : '<p class="ds" style="margin:0">Ningún dispositivo registrado todavía.</p>'}
   ${pg.length ? `<h5>Pagos (${eur(pg.reduce((s, p) => s + num(p.importe, 0), 0))})</h5>` + pg.slice(-5).reverse().map(p => `<div class="fila"><div class="g"><b>${eur(p.importe)}</b><small>${fecha(p.fecha)} · ${p.meses} mes${p.meses == 1 ? '' : 'es'}</small></div></div>`).join('') : ''}
   <h5>Zona peligrosa</h5><button class="btn mal min" id="fDel">Eliminar licencia</button>`);
   h.querySelector('#fCod').onclick = () => copia(k, 'Código copiado');
@@ -287,7 +292,7 @@ function ficha(k) {
   h.querySelector('#fBlo').onclick = async () => { const r = await api('licEstado', { codigo:k, estado:blo ? 'activa' : 'bloqueada' }); if (r.ok) { toast(blo ? 'Licencia activada' : 'Licencia bloqueada', !blo); pinta(); ficha(k); } else toast(r.error, true); };
   h.querySelector('#fCobro').onclick = () => copia(enlacePago(l.precio), 'Enlace de pago copiado');
   h.querySelector('#fEd').onclick = () => editaLic(k);
-  h.querySelector('#fInst').onclick = () => integra(l, a);
+  h.querySelectorAll('[data-ins]').forEach(b => b.onclick = () => integra(l, app1(b.dataset.ins)));
   h.querySelectorAll('[data-d]').forEach(b => b.onclick = async () => { const r = await api('dispLiberar', { codigo:k, disp:b.dataset.d }); if (r.ok) { toast('Dispositivo liberado'); pinta(); ficha(k); } });
   h.querySelector('#fDel').onclick = async () => { if (await confirma('Eliminar licencia', 'Se borrará la licencia de ' + l.cliente + ' y dejará de poder usar ' + a.nombre + '. No se puede deshacer.')) { const r = await api('licBorrar', { codigo:k }); if (r.ok) { toast('Licencia eliminada'); pinta(); } } };
 }
@@ -329,7 +334,7 @@ function integra(l, a) {
 /* ---------- apps ---------- */
 function vApps() {
   $('#main').innerHTML = `<div class="vista">${cab('APLICACIONES', 'Cada app, juego o script que vendes con licencia', bNueva('bNApp'))}
-  <div class="grid">${D.apps.map((a, i) => { const ls = D.lics.filter(l => l.app === a.id), act = ls.filter(l => l.ef === 'activa'), kb = D.scripts[a.id];
+  <div class="grid">${D.apps.map((a, i) => { const ls = D.lics.filter(l => idsDe(l.app).includes(a.id)), act = ls.filter(l => l.ef === 'activa'), kb = D.scripts[a.id];
     return `<div class="card appc tilt st" style="--i:${i}" data-a="${a.id}"><div class="brillo"></div><div class="ico">${ic(a.tipo === 'script' ? 'scr' : 'web')}</div><h4>${esc(a.nombre)}</h4>
     <span style="font-size:11.5px;color:var(--sua)">${a.tipo === 'script' ? 'Script Tampermonkey' : 'Aplicación web'} · id <span style="font-family:var(--mono);color:var(--cian)">${a.id}</span></span>
     <div class="meta" style="margin-top:14px"><span>Licencias <b>${ls.length}</b></span><span>Activas <b class="c-ok">${act.length}</b></span><span>Mensual <b>${eur(act.reduce((s, l) => s + num(l.precio, 0), 0))}</b></span></div>
