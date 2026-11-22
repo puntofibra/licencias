@@ -235,3 +235,13 @@ body.sinsel{-webkit-user-select:none;user-select:none}
 .ordenando .card:not(.coge){transition:transform .2s,opacity .2s}
 .pkbus{margin-bottom:8px;padding:9px 13px;font-size:13px}
 #pkVacio{padding:6px 2px;margin:0}
+.insl{display:flex;flex-direction:column;gap:8px}
+.insf{display:flex;gap:8px;align-items:stretch}
+.insf .btn{flex:1;justify-content:flex-start;text-align:left;min-width:0}
+.estrella{flex:none;width:46px;border-radius:13px;border:1px solid var(--linea);background:rgba(5,8,18,.5);display:grid;place-items:center;cursor:pointer;transition:.2s}
+.estrella svg{width:21px;height:21px;fill:none;stroke:#5b6378;stroke-width:1.6;stroke-linejoin:round;transition:.2s}
+.estrella:hover svg{stroke:#8a93a8}
+.estrella.on{border-color:rgba(255,197,61,.45);background:rgba(255,197,61,.08)}
+.estrella.on svg{fill:#ffc53d;stroke:#ffc53d;filter:drop-shadow(0 0 8px rgba(255,197,61,.7))}
+.estrella:active{transform:scale(.88)}
+.hoja h5 .ayuda{float:right;letter-spacing:.05em;text-transform:none;font-weight:500;color:#6b7388}
