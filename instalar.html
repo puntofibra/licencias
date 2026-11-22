@@ -72,7 +72,7 @@ h1 span{background:linear-gradient(90deg,var(--cian),var(--vio));-webkit-backgro
 .scr .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(139,92,255,.14);color:#c4b0ff}
 .scr .ico svg{width:17px;height:17px}
 .scr .nm{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.scr .nm small{display:block;font-weight:400;color:var(--sua);font-size:12px}
+.scr .nm small{display:block;font-weight:400;color:var(--sua);font-size:12px;white-space:normal;line-height:1.35;margin-top:1px}
 .scr .btn{height:38px;padding:0 15px;font-size:13px}
 .scr.hecho{border-color:rgba(43,255,154,.3);background:rgba(43,255,154,.05)}
 .scr.hecho .ico{background:rgba(43,255,154,.14);color:var(--ok)}
@@ -246,9 +246,9 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
       card.querySelectorAll('.scr').forEach(el => {
         const e = est(+el.dataset.i), b = el.querySelector('.btn'), sm = el.querySelector('.nm small');
         el.classList.toggle('hecho', e === 'ok'); el.classList.toggle('nueva', e === 'nueva'); el.classList.toggle('pend', e === 'pend');
-        b.innerHTML = e === 'ok' ? ICO.ok + 'Instalado' : e === 'nueva' ? ICO.upd + 'Actualizar' : e === 'pend' ? ICO.tm + 'Reintentar' : ICO.tm + 'Instalar';
+        b.innerHTML = e === 'ok' ? ICO.ok + 'Instalado' : e === 'nueva' ? ICO.upd + 'Actualizar' : e === 'pend' ? ICO.tm + 'Reinstalar' : ICO.tm + 'Instalar';
         b.title = e === 'ok' ? 'Pulsa otra vez si necesitas reinstalarlo' : e === 'pend' ? 'Si no llegaste a pulsar Instalar en Tampermonkey, púlsalo otra vez' : '';
-        sm.innerHTML = e === 'nueva' ? 'Nueva versión disponible' : e === 'ok' ? '<span class="vivo"></span>Instalado en este ordenador' : e === 'pend' ? 'Confirma en Tampermonkey y vuelve a esta pestaña' : 'Script de Tampermonkey';
+        sm.innerHTML = e === 'nueva' ? 'Nueva versión disponible' : e === 'ok' ? '<span class="vivo"></span>Instalado en este ordenador' : e === 'pend' ? 'Pulsa Instalar en Tampermonkey y vuelve aquí' : 'Script de Tampermonkey';
         if (e === 'ok') c++; if (e === 'nueva') nuevas++;
       });
       $('#upd').hidden = !nuevas;
