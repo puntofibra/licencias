@@ -451,6 +451,8 @@ function loader(l, a) {
     onload: function (x) {
       var r; try { r = JSON.parse(x.responseText); } catch (e) { return; }
       if (r.ok && r.code) { var n = { t: Date.now(), lic: LIC, code: r.code, run: runAt(r.code) }; GM_setValue('lic_cache', JSON.stringify(n)); GM_setValue('lic_no', ''); lanza(n); }
+      // licencia al día pero el script aún sin código: queda en espera, sin avisos, y vuelve a mirar a las 3 horas
+      else if (r.estado === 'sincodigo') { GM_setValue('lic_cache', JSON.stringify({ t: Date.now(), lic: LIC, code: '', run: 'document-idle' })); GM_setValue('lic_no', ''); }
       else { GM_setValue('lic_cache', ''); GM_setValue('lic_no', JSON.stringify({ t: Date.now(), lic: LIC, r: r })); aviso(r); }
     },
     onerror: function () {}, ontimeout: function () {}
