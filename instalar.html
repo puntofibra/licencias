@@ -176,7 +176,8 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
 
   const clave = 'fm_inst_' + k;
   let hechos = {}; try { hechos = JSON.parse(localStorage.getItem(clave) || '{}'); } catch (e) {}
-  const migra = lista => { lista.forEach((s, i) => { if (hechos[i] && !hechos[s.archivo]) hechos[s.archivo] = 'antigua'; delete hechos[i]; }); };
+  // limpia lo guardado por versiones anteriores de esta página (por posición o por versión)
+  const migra = lista => { Object.keys(hechos).forEach(x => { if (!/\.user\.js$/.test(x)) delete hechos[x]; }); };
   const guarda = () => { try { localStorage.setItem(clave, JSON.stringify(hechos)); } catch (e) {} };
 
   fetch(API + '?a=instInfo&t=' + encodeURIComponent(k), { redirect: 'follow' }).then(r => r.json()).then(r => {
@@ -210,7 +211,7 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
         </div></li>
         <li class="paso" id="p3"><div class="num">3</div><div>
           <h2>Confirma en Tampermonkey</h2>
-          <p>En la pestaña que se abre, pulsa el botón <b>Instalar</b>${uno ? '' : ' (una vez por cada script)'}. Después, <b>abre o recarga la página</b> donde usas el script. Cuando arranque por primera vez, aquí verás <b style="color:var(--ok)">Funcionando</b>.</p>
+          <p>En la pestaña que se abre, pulsa el botón <b>Instalar</b>${uno ? '' : ' (una vez por cada script)'}. Después <b>vuelve a esta pestaña</b>: se recargará sola y verás <b style="color:var(--ok)">Instalado en este ordenador</b>.</p>
           <div class="mock"><div class="tb"><i></i><i></i><i></i>&nbsp;Tampermonkey</div><div class="bd"><span>${esc(limpia(r.lista[0].nombre))}</span><b>Instalar</b></div></div>
         </div></li>
       </ol>
@@ -232,46 +233,45 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
     $('#bTienda').onclick = () => setTimeout(paso2, 800);
     $('#bCopia').onclick = async () => { try { await navigator.clipboard.writeText('chrome://extensions'); toast('Dirección copiada'); } catch (e) { toast('Escribe: chrome://extensions'); } };
     let aviso = null;
-    // estado de cada script: sin instalar, instalado (misma versión) o con versión nueva
-    // ok = ya ha funcionado en su ordenador (lo confirma el servidor) · pend = pulsó Instalar pero aún no ha arrancado
-    const est = i => { const s = r.lista[i], v = hechos[s.archivo];
-      if (v && v !== (s.version || '1')) return 'nueva';
-      if (s.activo) return 'ok';
-      return v ? 'pend' : 'no'; };
+    // cada loader instalado en ESTE navegador deja una marca en la página (data-fm-<app> = "licencia|versión")
+    const marcas = () => { const o = {}; [].forEach.call(document.documentElement.attributes, at => { if (at.name.indexOf('data-fm-') === 0) { const p = at.value.split('|'); o[at.name.slice(8)] = p[1] || '0'; } }); return o; };
+    const menor = (x, y) => { const a = String(x).split('.'), b = String(y).split('.'); for (let i = 0; i < Math.max(a.length, b.length); i++) { const p = +(a[i] || 0), q = +(b[i] || 0); if (p !== q) return p < q; } return false; };
+    let M = marcas();
+    // ok = instalado en este navegador · nueva = instalado pero con versión antigua · pend = pulsó Instalar y aún no ha vuelto · no = sin instalar
+    const est = i => { const s = r.lista[i], v = M[String(s.app || '').toLowerCase()];
+      if (v) return s.version && menor(v, s.version) ? 'nueva' : 'ok';
+      return hechos[s.archivo] ? 'pend' : 'no'; };
     const refresca = () => {
-      let c = 0, nuevas = 0;
+      M = marcas(); let c = 0, nuevas = 0;
       card.querySelectorAll('.scr').forEach(el => {
         const e = est(+el.dataset.i), b = el.querySelector('.btn'), sm = el.querySelector('.nm small');
         el.classList.toggle('hecho', e === 'ok'); el.classList.toggle('nueva', e === 'nueva'); el.classList.toggle('pend', e === 'pend');
-        b.innerHTML = e === 'ok' ? ICO.ok + 'Instalado' : e === 'nueva' ? ICO.upd + 'Actualizar' : e === 'pend' ? ICO.tm + 'Reinstalar' : ICO.tm + 'Instalar';
-        b.title = e === 'ok' ? 'Pulsa otra vez si necesitas reinstalarlo' : e === 'pend' ? 'Si no llegaste a confirmar en Tampermonkey, púlsalo otra vez' : '';
-        sm.innerHTML = e === 'nueva' ? 'Nueva versión disponible' : e === 'ok' ? '<span class="vivo"></span>Funcionando en tu ordenador' : e === 'pend' ? 'Pendiente · abre la web donde lo usas para activarlo' : 'Script de Tampermonkey';
+        b.innerHTML = e === 'ok' ? ICO.ok + 'Instalado' : e === 'nueva' ? ICO.upd + 'Actualizar' : e === 'pend' ? ICO.tm + 'Reintentar' : ICO.tm + 'Instalar';
+        b.title = e === 'ok' ? 'Pulsa otra vez si necesitas reinstalarlo' : e === 'pend' ? 'Si no llegaste a pulsar Instalar en Tampermonkey, púlsalo otra vez' : '';
+        sm.innerHTML = e === 'nueva' ? 'Nueva versión disponible' : e === 'ok' ? '<span class="vivo"></span>Instalado en este ordenador' : e === 'pend' ? 'Confirma en Tampermonkey y vuelve a esta pestaña' : 'Script de Tampermonkey';
         if (e === 'ok') c++; if (e === 'nueva') nuevas++;
       });
       $('#upd').hidden = !nuevas;
-      if ($('#barra')) { $('#barra').style.width = (c / n * 100) + '%'; $('#cuenta').textContent = c + ' de ' + n + ' funcionando' + (nuevas ? ' · ' + nuevas + ' por actualizar' : ''); }
+      if ($('#barra')) { $('#barra').style.width = (c / n * 100) + '%'; $('#cuenta').textContent = c + ' de ' + n + ' instalados' + (nuevas ? ' · ' + nuevas + ' por actualizar' : ''); }
       if (c || nuevas) { paso2(); p3.classList.add('act'); }
       p2.classList.toggle('ok', c >= n); if (c >= n) p2.classList.remove('act'); else if (c || nuevas) p2.classList.add('act');
+      // lo que ya está instalado aquí deja de contar como pendiente
+      let cambia = false; r.lista.forEach(s => { if (M[String(s.app || '').toLowerCase()] && hechos[s.archivo]) { delete hechos[s.archivo]; cambia = true; } }); if (cambia) guarda();
     };
+    let volver = false;
     card.querySelectorAll('.scr .btn').forEach(b => b.addEventListener('click', () => {
-      const s = r.lista[+b.dataset.i]; hechos[s.archivo] = s.version || '1'; guarda(); setTimeout(refresca, 400);
+      const s = r.lista[+b.dataset.i]; hechos[s.archivo] = 1; guarda(); volver = true; setTimeout(refresca, 400);
       clearTimeout(aviso);
       aviso = setTimeout(() => { if (document.hasFocus()) { const a = $('#ayuda'); if (a && !a.open) { a.open = true; toast('¿No se ha abierto Tampermonkey? Mira la ayuda'); } } }, 6000);
     }));
     window.addEventListener('blur', () => clearTimeout(aviso));
-    // vuelve a preguntar al servidor qué scripts ya funcionan (al volver a esta pestaña y cada 20 s mientras haya pendientes)
-    const t0 = Date.now(); let pidiendo = false;
-    const recarga = () => {
-      if (pidiendo || document.hidden) return; pidiendo = true;
-      fetch(API + '?a=instInfo&t=' + encodeURIComponent(k), { redirect: 'follow' }).then(x => x.json()).then(x => {
-        if (x && x.ok && x.lista) x.lista.forEach(nv => { const s = r.lista.find(y => y.archivo === nv.archivo); if (s) { s.activo = nv.activo; s.version = nv.version; } });
-        refresca();
-      }).catch(() => {}).finally(() => { pidiendo = false; });
-    };
-    const hayPend = () => r.lista.some((s, i) => est(i) === 'pend');
-    setInterval(() => { if (hayPend() && Date.now() - t0 < 1800000) recarga(); }, 20000);
-    window.addEventListener('focus', recarga);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) recarga(); });
+    // al volver de Tampermonkey se recarga la página para que el script recién instalado deje su marca
+    const alVolver = () => { if (volver && !document.hidden) { volver = false; toast('Comprobando la instalación…'); setTimeout(() => location.reload(), 500); } };
+    document.addEventListener('visibilitychange', alVolver);
+    window.addEventListener('focus', alVolver);
+    // los loaders arrancan muy pronto, pero por si alguno llega tarde, se vigila la marca un rato
+    new MutationObserver(refresca).observe(document.documentElement, { attributes: true });
+    setTimeout(refresca, 1500);
     refresca();
   }
 })();
