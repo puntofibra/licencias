@@ -77,6 +77,12 @@ h1 span{background:linear-gradient(90deg,var(--cian),var(--vio));-webkit-backgro
 .scr.hecho{border-color:rgba(43,255,154,.3);background:rgba(43,255,154,.05)}
 .scr.hecho .ico{background:rgba(43,255,154,.14);color:var(--ok)}
 .scr.hecho .btn{background:transparent;color:var(--ok);border:1px solid rgba(43,255,154,.35);box-shadow:none}
+.scr.nueva{border-color:rgba(255,197,61,.45);background:rgba(255,197,61,.06)}
+.scr.nueva .ico{background:rgba(255,197,61,.14);color:var(--warn)}
+.scr.nueva .nm small{color:var(--warn)}
+.scr.nueva .btn{color:#1a1200;background:linear-gradient(135deg,#ffd666,#ffb020);box-shadow:0 6px 22px rgba(255,176,32,.3)}
+.upd{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:11px 13px;border-radius:14px;background:rgba(255,197,61,.08);border:1px solid rgba(255,197,61,.35);color:#ffe2a0;font-size:13px}
+.upd svg{flex:0 0 18px;height:18px;color:var(--warn);margin-top:1px}
 .prog{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:12.5px;color:var(--sua)}
 .barra{flex:1;height:6px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden}
 .barra i{display:block;height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,var(--cian),var(--ok));transition:width .5s cubic-bezier(.2,.9,.2,1)}
@@ -145,6 +151,7 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
     tm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>',
     ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
     scr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg>',
+    upd: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg>',
     ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
     help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 0 1 5 1c0 1.8-2.5 2.2-2.5 3.8M12 17.5v.01"/></svg>',
     wa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5 5 16a8.5 8.5 0 1 1 3.3 3.2z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5"/></svg>',
@@ -162,11 +169,12 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
 
   const clave = 'fm_inst_' + k;
   let hechos = {}; try { hechos = JSON.parse(localStorage.getItem(clave) || '{}'); } catch (e) {}
+  const migra = lista => { lista.forEach((s, i) => { if (hechos[i] && !hechos[s.archivo]) hechos[s.archivo] = 'antigua'; delete hechos[i]; }); };
   const guarda = () => { try { localStorage.setItem(clave, JSON.stringify(hechos)); } catch (e) {} };
 
   fetch(API + '?a=instInfo&t=' + encodeURIComponent(k), { redirect: 'follow' }).then(r => r.json()).then(r => {
     if (!r || !r.ok || !r.lista || !r.lista.length) return error('Este enlace ya no es válido o ha caducado.', r && r.soporte);
-    pinta(r);
+    migra(r.lista); pinta(r);
   }).catch(() => error('No hemos podido conectar con el servidor. Revisa tu conexión y vuelve a cargar la página.'));
 
   function pinta(r) {
@@ -189,6 +197,7 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
         <li class="paso" id="p2"><div class="num">2</div><div>
           <h2>${uno ? 'Instala tu script' : 'Instala tus scripts'}</h2>
           <p>${uno ? 'Pulsa el botón y se abrirá Tampermonkey.' : 'Pulsa <b>Instalar</b> en cada uno, de uno en uno. Cada botón abre Tampermonkey.'}</p>
+          <div class="upd" id="upd" hidden>${ICO.upd}<div><b>Hay una actualización.</b> Pulsa <b>Actualizar</b> en los scripts marcados en amarillo y confirma en Tampermonkey. Tus datos y ajustes se mantienen.</div></div>
           <div class="scripts">${r.lista.map((s, i) => `<div class="scr" data-i="${i}"><div class="ico">${ICO.scr}</div><div class="nm" title="${esc(s.nombre)}">${esc(limpia(s.nombre))}<small>Script de Tampermonkey</small></div><a class="btn pri" href="${esc(API + '/' + s.archivo)}" target="_blank" rel="noopener" data-i="${i}">${ICO.tm}Instalar</a></div>`).join('')}</div>
           ${uno ? '' : `<div class="prog"><div class="barra"><i id="barra"></i></div><span id="cuenta">0 de ${n}</span></div>`}
         </div></li>
@@ -216,19 +225,25 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
     $('#bTienda').onclick = () => setTimeout(paso2, 800);
     $('#bCopia').onclick = async () => { try { await navigator.clipboard.writeText('chrome://extensions'); toast('Dirección copiada'); } catch (e) { toast('Escribe: chrome://extensions'); } };
     let aviso = null;
+    // estado de cada script: sin instalar, instalado (misma versión) o con versión nueva
+    const est = i => { const s = r.lista[i], v = hechos[s.archivo]; return !v ? 'no' : (v === (s.version || '1') ? 'ok' : 'nueva'); };
     const refresca = () => {
-      const c = Object.keys(hechos).filter(i => i < n).length;
+      let c = 0, nuevas = 0;
       card.querySelectorAll('.scr').forEach(el => {
-        const h = !!hechos[el.dataset.i]; el.classList.toggle('hecho', h);
-        el.querySelector('.btn').innerHTML = h ? ICO.ok + 'Instalado' : ICO.tm + 'Instalar';
-        el.querySelector('.btn').title = h ? 'Pulsa otra vez si necesitas reinstalarlo' : '';
+        const e = est(+el.dataset.i), b = el.querySelector('.btn'), sm = el.querySelector('.nm small');
+        el.classList.toggle('hecho', e === 'ok'); el.classList.toggle('nueva', e === 'nueva');
+        b.innerHTML = e === 'ok' ? ICO.ok + 'Instalado' : e === 'nueva' ? ICO.upd + 'Actualizar' : ICO.tm + 'Instalar';
+        b.title = e === 'ok' ? 'Pulsa otra vez si necesitas reinstalarlo' : '';
+        sm.textContent = e === 'nueva' ? 'Nueva versión disponible' : 'Script de Tampermonkey';
+        if (e === 'ok') c++; if (e === 'nueva') nuevas++;
       });
-      if ($('#barra')) { $('#barra').style.width = (c / n * 100) + '%'; $('#cuenta').textContent = c + ' de ' + n; }
-      if (c) { paso2(); p3.classList.add('act'); }
-      if (c >= n) { p2.classList.remove('act'); p2.classList.add('ok'); }
+      $('#upd').hidden = !nuevas;
+      if ($('#barra')) { $('#barra').style.width = (c / n * 100) + '%'; $('#cuenta').textContent = c + ' de ' + n + (nuevas ? ' · ' + nuevas + ' por actualizar' : ''); }
+      if (c || nuevas) { paso2(); p3.classList.add('act'); }
+      p2.classList.toggle('ok', c >= n); if (c >= n) p2.classList.remove('act'); else if (c || nuevas) p2.classList.add('act');
     };
     card.querySelectorAll('.scr .btn').forEach(b => b.addEventListener('click', () => {
-      hechos[b.dataset.i] = 1; guarda(); setTimeout(refresca, 400);
+      const s = r.lista[+b.dataset.i]; hechos[s.archivo] = s.version || '1'; guarda(); setTimeout(refresca, 400);
       clearTimeout(aviso);
       aviso = setTimeout(() => { if (document.hasFocus()) { const a = $('#ayuda'); if (a && !a.open) { a.open = true; toast('¿No se ha abierto Tampermonkey? Mira la ayuda'); } } }, 6000);
     }));
