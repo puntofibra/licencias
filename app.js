@@ -296,7 +296,7 @@ function ficha(k) {
   <button class="cod" id="fCod"><span>${k}</span>${ic('copia')}</button>
   <h5>Renovar (apunta el pago)</h5><div class="bts"><button class="btn ok" data-m="1">+1 mes</button><button class="btn ok" data-m="3">+3 meses</button><button class="btn ok" data-m="12">+1 año</button></div>
   <h5>Acciones</h5><div class="bts"><button class="btn ${blo ? 'ok' : 'mal'}" id="fBlo">${blo ? 'Activar' : 'Bloquear'}</button>${l.telefono ? `<a class="btn" href="${waCliente(l)}" target="_blank" rel="noopener">${ic('wa')}WhatsApp</a>` : ''}<button class="btn" id="fCobro">${ic('pagos')}Enlace de pago</button><button class="btn" id="fEd">Editar</button></div>
-  <h5>Instalación${a.pack ? ' · una por cada app del pack' : ''}<span class="ayuda">★ = ya entregado</span></h5><div class="insl">${(a.pack || [a]).map(x => `<div class="insf"><button class="estrella ${idsDe(l.entregados).includes(x.id) ? 'on' : ''}" data-ent="${esc(x.id)}" title="Marcar como entregado al cliente">${ESTRELLA}</button><button class="btn" data-ins="${esc(x.id)}">${ic(x.tipo === 'script' ? 'scr' : 'web')}${a.pack ? esc(x.nombre) : x.tipo === 'script' ? 'Generar loader de Tampermonkey' : 'Ver código de integración'}</button></div>`).join('')}</div>
+  <h5>Instalación${a.pack ? ' · una por cada app del pack' : ''}<span class="ayuda">★ = ya entregado</span></h5>${(a.pack || [a]).some(x => x.tipo === 'script') ? `<button class="enlbtn" id="fEnl"><span class="ei">${ic('comp')}</span><span class="et"><b>Enlace de instalación</b><small>Un solo enlace: el cliente lo abre y pulsa Instalar. Sin copiar ni descargar.</small></span><span class="ef">›</span></button>` : ''}<div class="insl">${(a.pack || [a]).map(x => `<div class="insf"><button class="estrella ${idsDe(l.entregados).includes(x.id) ? 'on' : ''}" data-ent="${esc(x.id)}" title="Marcar como entregado al cliente">${ESTRELLA}</button><button class="btn" data-ins="${esc(x.id)}">${ic(x.tipo === 'script' ? 'scr' : 'web')}${a.pack ? esc(x.nombre) : x.tipo === 'script' ? 'Generar loader de Tampermonkey' : 'Ver código de integración'}</button></div>`).join('')}</div>
   <h5>Dispositivos (${a.pack ? ds.length + (mx ? ' · máx. ' + mx + ' por app' : '') : ds.length + (mx ? '/' + mx : '')})</h5>
   ${ds.length ? ds.map(d => `<div class="fila"><div class="g"><b>${esc(nombreDisp(d.info))}</b><small>${a.pack && d.app ? esc(app1(d.app).nombre) + ' · ' : ''}Desde ${fecha(d.primero)} · último ${fecha(d.ultimo)} ${d.ultimo.slice(11, 16)}</small></div><button class="btn min mal" data-d="${esc(d.disp)}">Liberar</button></div>`).join('') : '<p class="ds" style="margin:0">Ningún dispositivo registrado todavía.</p>'}
   ${pg.length ? `<h5>Pagos (${eur(pg.reduce((s, p) => s + num(p.importe, 0), 0))})</h5>` + pg.slice(-5).reverse().map(p => `<div class="fila"><div class="g"><b>${eur(p.importe)}</b><small>${fecha(p.fecha)} · ${p.meses} mes${p.meses == 1 ? '' : 'es'}</small></div></div>`).join('') : ''}
@@ -307,10 +307,28 @@ function ficha(k) {
   h.querySelector('#fCobro').onclick = () => copia(enlacePago(l.precio), 'Enlace de pago copiado');
   h.querySelector('#fEd').onclick = () => editaLic(k);
   h.querySelectorAll('[data-ins]').forEach(b => b.onclick = () => integra(l, app1(b.dataset.ins)));
+  if (h.querySelector('#fEnl')) h.querySelector('#fEnl').onclick = () => enlaceInst(l, (a.pack || [a]).filter(x => x.tipo === 'script'));
   h.querySelectorAll('[data-ent]').forEach(b => b.onclick = async () => { const on = !b.classList.contains('on'); b.classList.toggle('on', on); bip(on ? 880 : 420, .04);
     const r = await api('licEntregado', { codigo:k, app:b.dataset.ent, on }); if (r.ok) toast(on ? 'Marcado como entregado' : 'Quitado de entregados'); else { b.classList.toggle('on', !on); toast(r.error || 'No se ha podido guardar', true); } });
   h.querySelectorAll('[data-d]').forEach(b => b.onclick = async () => { const r = await api('dispLiberar', { codigo:k, disp:b.dataset.d }); if (r.ok) { toast('Dispositivo liberado'); pinta(); ficha(k); } });
   h.querySelector('#fDel').onclick = async () => { if (await confirma('Eliminar licencia', 'Se borrará la licencia de ' + l.cliente + ' y dejará de poder usar ' + a.nombre + '. No se puede deshacer.')) { const r = await api('licBorrar', { codigo:k }); if (r.ok) { toast('Licencia eliminada'); pinta(); } } };
+}
+async function enlaceInst(l, lista) {
+  const r = await api('enlacesCrear', { codigo:l.codigo, lista:lista.map(x => ({ app:x.id, texto:loader(l, x) })) });
+  if (!r.ok) return toast(r.error || 'No se ha podido crear el enlace', true);
+  const url = URL_PANEL + 'instalar.html?k=' + r.token, n = lista.length, que = n === 1 ? 'tu script ' + lista[0].nombre.replace(/^\s*\d+\s*[-–·.]\s*/, '') : 'tus ' + n + ' scripts';
+  const msg = `Hola ${l.cliente}, aquí tienes la instalación de ${que} de FuturMovil 👇\n${url}\n\nÁbrelo en el ordenador con Google Chrome y sigue los 3 pasos (menos de un minuto). Si tienes cualquier duda, escríbeme por aquí.`;
+  let t = String(l.telefono || '').replace(/\D/g, ''); if (t.length === 9) t = '34' + t;
+  const falta = lista.filter(x => !D.scripts[x.id]);
+  const h = modal(`<h3>Enlace de instalación<button class="x">✕</button></h3>
+  <p class="ds">Envíaselo a <b>${esc(l.cliente)}</b>. Al abrirlo verá una página guiada con ${n === 1 ? 'su script' : 'sus ' + n + ' scripts'} y un botón <b>Instalar</b> en cada uno: Tampermonkey se abre solo.</p>
+  <button class="cod enl" id="eU"><span>${esc(url)}</span>${ic('copia')}</button>
+  <div class="bts"><button class="btn" id="eC">${ic('copia')}Copiar mensaje</button>${t ? `<a class="btn ok" href="https://wa.me/${t}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" id="eW">${ic('wa')}Enviar por WhatsApp</a>` : ''}<a class="btn" href="${url}" target="_blank" rel="noopener">${ic('web')}Ver página</a></div>
+  ${falta.length ? `<p class="ds c-warn" style="margin-top:12px">Ojo: aún no has subido el código de ${falta.map(x => esc(x.nombre)).join(', ')}. Se instalará igual y empezará a funcionar en cuanto lo subas.</p>` : ''}
+  <p class="ds" style="margin-top:12px">El enlace de este cliente es siempre el mismo. Si añades o quitas scripts de su licencia, pulsa aquí otra vez y se actualiza solo.</p>`);
+  h.querySelector('#eU').onclick = () => copia(url, 'Enlace copiado');
+  h.querySelector('#eC').onclick = () => copia(msg, 'Mensaje copiado');
+  if (h.querySelector('#eW')) h.querySelector('#eW').onclick = () => toast('Abriendo WhatsApp…');
 }
 const ESTRELLA = '<svg viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.1 6.4 20l1.1-6.2L2.9 9.4l6.3-.9z"/></svg>';
 function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; const so = /android/i.test(ua) ? 'Android' : /iphone|ipad/i.test(ua) ? 'iPhone/iPad' : /windows/i.test(ua) ? 'Windows' : /mac os/i.test(ua) ? 'Mac' : /linux/i.test(ua) ? 'Linux' : 'Dispositivo';
