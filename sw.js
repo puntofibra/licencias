@@ -1,4 +1,4 @@
-const C = 'licencias-v16';
+const C = 'licencias-v17';
 const BASE = ['./', 'index.html', 'estilos.css', 'app.js', 'config.js', 'manifest.webmanifest', 'icon-192.png'];
 // siempre se pide la versión más reciente a GitHub (sin esperar a que caduque la caché del navegador);
 // la copia guardada solo se usa si no hay conexión
