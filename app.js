@@ -296,7 +296,7 @@ function ficha(k) {
   <button class="cod" id="fCod"><span>${k}</span>${ic('copia')}</button>
   <h5>Renovar (apunta el pago)</h5><div class="bts"><button class="btn ok" data-m="1">+1 mes</button><button class="btn ok" data-m="3">+3 meses</button><button class="btn ok" data-m="12">+1 año</button></div>
   <h5>Acciones</h5><div class="bts"><button class="btn ${blo ? 'ok' : 'mal'}" id="fBlo">${blo ? 'Activar' : 'Bloquear'}</button>${l.telefono ? `<a class="btn" href="${waCliente(l)}" target="_blank" rel="noopener">${ic('wa')}WhatsApp</a>` : ''}<button class="btn" id="fCobro">${ic('pagos')}Enlace de pago</button><button class="btn" id="fEd">Editar</button></div>
-  <h5>Instalación${a.pack ? ' · una por cada app del pack' : ''}<span class="ayuda">★ = ya entregado</span></h5>${(a.pack || [a]).some(x => x.tipo === 'script') ? `<button class="enlbtn" id="fEnl"><span class="ei">${ic('comp')}</span><span class="et"><b>Enlace de instalación</b><small>Un solo enlace: el cliente lo abre y pulsa Instalar. Sin copiar ni descargar.</small></span><span class="ef">›</span></button>` : ''}<div class="insl">${(a.pack || [a]).map(x => `<div class="insf"><button class="estrella ${idsDe(l.entregados).includes(x.id) ? 'on' : ''}" data-ent="${esc(x.id)}" title="Marcar como entregado al cliente">${ESTRELLA}</button><button class="btn" data-ins="${esc(x.id)}">${ic(x.tipo === 'script' ? 'scr' : 'web')}${a.pack ? esc(x.nombre) : x.tipo === 'script' ? 'Generar loader de Tampermonkey' : 'Ver código de integración'}</button></div>`).join('')}</div>
+  <h5>Instalación${a.pack ? ' · una por cada app del pack' : ''}<span class="ayuda">★ entregado · 🔔 avisos de pago</span></h5>${(a.pack || [a]).some(x => x.tipo === 'script') ? `<button class="enlbtn" id="fEnl"><span class="ei">${ic('comp')}</span><span class="et"><b>Enlace de instalación</b><small>Un solo enlace: el cliente lo abre y pulsa Instalar. Sin copiar ni descargar.</small></span><span class="ef">›</span></button>` : ''}<div class="insl">${(a.pack || [a]).map(x => `<div class="insf"><button class="estrella ${idsDe(l.entregados).includes(x.id) ? 'on' : ''}" data-ent="${esc(x.id)}" title="Marcar como entregado al cliente">${ESTRELLA}</button>${x.tipo === 'script' ? `<button class="campana ${idsDe(l.silenciados).includes(x.id) ? 'on' : ''}" data-sil="${esc(x.id)}" title="${idsDe(l.silenciados).includes(x.id) ? AV_OFF : AV_ON}">${idsDe(l.silenciados).includes(x.id) ? CAMPANA_NO : CAMPANA}</button>` : ''}<button class="btn" data-ins="${esc(x.id)}">${ic(x.tipo === 'script' ? 'scr' : 'web')}${a.pack ? esc(x.nombre) : x.tipo === 'script' ? 'Generar loader de Tampermonkey' : 'Ver código de integración'}</button></div>`).join('')}</div>
   <h5>Dispositivos (${a.pack ? ds.length + (mx ? ' · máx. ' + mx + ' por app' : '') : ds.length + (mx ? '/' + mx : '')})</h5>
   ${ds.length ? ds.map(d => `<div class="fila"><div class="g"><b>${esc(nombreDisp(d.info))}</b><small>${a.pack && d.app ? esc(app1(d.app).nombre) + ' · ' : ''}Desde ${fecha(d.primero)} · último ${fecha(d.ultimo)} ${d.ultimo.slice(11, 16)}</small></div><button class="btn min mal" data-d="${esc(d.disp)}">Liberar</button></div>`).join('') : '<p class="ds" style="margin:0">Ningún dispositivo registrado todavía.</p>'}
   ${pg.length ? `<h5>Pagos (${eur(pg.reduce((s, p) => s + num(p.importe, 0), 0))})</h5>` + pg.slice(-5).reverse().map(p => `<div class="fila"><div class="g"><b>${eur(p.importe)}</b><small>${fecha(p.fecha)} · ${p.meses} mes${p.meses == 1 ? '' : 'es'}</small></div></div>`).join('') : ''}
@@ -310,6 +310,8 @@ function ficha(k) {
   if (h.querySelector('#fEnl')) h.querySelector('#fEnl').onclick = () => enlaceInst(l, (a.pack || [a]).filter(x => x.tipo === 'script'));
   h.querySelectorAll('[data-ent]').forEach(b => b.onclick = async () => { const on = !b.classList.contains('on'); b.classList.toggle('on', on); bip(on ? 880 : 420, .04);
     const r = await api('licEntregado', { codigo:k, app:b.dataset.ent, on }); if (r.ok) toast(on ? 'Marcado como entregado' : 'Quitado de entregados'); else { b.classList.toggle('on', !on); toast(r.error || 'No se ha podido guardar', true); } });
+  h.querySelectorAll('[data-sil]').forEach(b => b.onclick = async () => { const on = !b.classList.contains('on'); const pon = v => { b.classList.toggle('on', v); b.innerHTML = v ? CAMPANA_NO : CAMPANA; b.title = v ? AV_OFF : AV_ON; }; pon(on); bip(on ? 420 : 880, .04);
+    const r = await api('licSilencio', { codigo:k, app:b.dataset.sil, on }); if (r.ok) toast(on ? 'Avisos silenciados: si no paga, este script se para sin enseñar cartel' : 'Avisos activados para este script'); else { pon(!on); toast(r.error || 'No se ha podido guardar', true); } });
   h.querySelectorAll('[data-d]').forEach(b => b.onclick = async () => { const r = await api('dispLiberar', { codigo:k, disp:b.dataset.d }); if (r.ok) { toast('Dispositivo liberado'); pinta(); ficha(k); } });
   h.querySelector('#fDel').onclick = async () => { if (await confirma('Eliminar licencia', 'Se borrará la licencia de ' + l.cliente + ' y dejará de poder usar ' + a.nombre + '. No se puede deshacer.')) { const r = await api('licBorrar', { codigo:k }); if (r.ok) { toast('Licencia eliminada'); pinta(); } } };
 }
@@ -330,6 +332,10 @@ async function enlaceInst(l, lista) {
   h.querySelector('#eC').onclick = () => copia(msg, 'Mensaje copiado');
   if (h.querySelector('#eW')) h.querySelector('#eW').onclick = () => toast('Abriendo WhatsApp…');
 }
+const AV_ON = 'Avisos activos: si la licencia vence o se bloquea, este script enseña el cartel de pago. Pulsa para silenciarlo';
+const AV_OFF = 'Avisos silenciados: si la licencia vence o se bloquea, este script se para sin enseñar ningún cartel. Pulsa para activarlos';
+const CAMPANA = '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>';
+const CAMPANA_NO = '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l1.5 2h-15"/><path d="M10 20.5a2 2 0 0 0 4 0M4 4l16 16"/></svg>';
 const ESTRELLA = '<svg viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.1 6.4 20l1.1-6.2L2.9 9.4l6.3-.9z"/></svg>';
 function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; const so = /android/i.test(ua) ? 'Android' : /iphone|ipad/i.test(ua) ? 'iPhone/iPad' : /windows/i.test(ua) ? 'Windows' : /mac os/i.test(ua) ? 'Mac' : /linux/i.test(ua) ? 'Linux' : 'Dispositivo';
   const nv = /edg\//i.test(ua) ? 'Edge' : /firefox/i.test(ua) ? 'Firefox' : /chrome/i.test(ua) ? 'Chrome' : /safari/i.test(ua) ? 'Safari' : ''; return so + (nv ? ' · ' + nv : ''); }
@@ -339,7 +345,7 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
 // así arranca al instante y no llama al servidor en cada página que abre el cliente.
 const REVISA_H = 3;
 // versión del loader: al subirla, el panel actualiza los enlaces guardados y Tampermonkey se lo baja solo a los clientes
-const LOADER_V = '2.2';
+const LOADER_V = '2.3';
 async function refrescaEnlaces() {
   try {
     if (!D || !D.inst || localStorage.getItem('loader_v') === LOADER_V) return;
@@ -401,6 +407,8 @@ function loader(l, a) {
   function aviso(r) {
     // los avisos solo salen en las webs donde funciona este script
     var g = guardadas(); if (g && !tocaR(g)) return;
+    // avisos silenciados desde el panel para este script: no enseña ningún cartel, simplemente no funciona
+    if (r.silencio) return;
     if (r.estado === 'apagada') return errorConexion();
     cuando('document-end', function () {
       // un solo cartel por licencia: si otro script del mismo pack ya lo ha puesto en esta página, no se repite
