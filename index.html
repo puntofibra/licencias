@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070f">
+<title>LICENCIAS · FuturMovil</title>
+<meta name="description" content="Panel de control de licencias de FuturMovil">
+<meta property="og:title" content="LICENCIAS · FuturMovil">
+<meta property="og:description" content="Panel de control de licencias de apps y scripts">
+<meta property="og:image" content="https://puntofibra.github.io/licencias/compartir.jpg">
+<meta property="og:url" content="https://puntofibra.github.io/licencias/">
+<meta property="og:type" content="website">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<canvas id="fx"></canvas><div class="aurora"></div><div class="rej"></div>
+<div id="carga" hidden></div>
+
+<div id="login" hidden>
+  <div class="caja">
+    <div class="escudo"><i></i><i></i><svg viewBox="0 0 24 24" fill="none" stroke="#3df5ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4 5.5v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10v-6z"/><circle cx="12" cy="10.5" r="2.2"/><path d="M12 12.7V16"/></svg></div>
+    <h1 class="marca">LICENCIAS</h1>
+    <div class="sub">FuturMovil · control central</div>
+    <div id="lgCuerpo"></div>
+    <div class="pie">
+      <button class="btn min" id="bInstalar"></button>
+      <button class="btn min" id="bCompartir"></button>
+    </div>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <nav class="nav" id="nav"></nav>
+  <main id="main"></main>
+</div>
+<div id="modal" hidden></div>
+<div id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
