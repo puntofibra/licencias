@@ -222,3 +222,4 @@ main{padding:18px 14px 40px}
 .mp select.in{padding:7px 10px;font-size:12px;max-width:260px}
 .mpos h5{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--sua);margin:16px 0 4px;font-weight:600}
 .mpos h5.c-warn{color:var(--warn)}
+.mpos h3 svg{width:16px;height:16px;flex:none;color:var(--cian)}
