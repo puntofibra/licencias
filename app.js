@@ -73,7 +73,12 @@ function cuenta(el) { const fin = +el.dataset.n, dec = el.dataset.d ? 2 : 0, suf
 })();
 
 /* ---------- modal ---------- */
-function modal(html) { cierra(); const m = $('#modal'); m.innerHTML = `<div class="hoja">${html}</div>`; m.hidden = false; m.onclick = e => { if (e.target === m || e.target.closest('.x')) cierra(); }; return m.firstElementChild; }
+function modal(html) { cierra(); const m = $('#modal'); m.innerHTML = `<div class="hoja">${html}</div>`; m.hidden = false; modal.sucio = false; m.oninput = () => { modal.sucio = true; };
+  m.onclick = e => { if (e.target.closest('.x')) return cierra(); if (e.target === m) return fuera(); if (e.target.closest('form')) modal.sucio = true; }; return m.firstElementChild; }
+// pinchar fuera (o Escape) no cierra una ventana en la que ya has empezado a escribir
+function fuera() { if (!modal.sucio) return cierra(); const h = $('#modal .hoja');
+  if (h) h.animate([{ transform:'translateX(0)' }, { transform:'translateX(-9px)' }, { transform:'translateX(9px)' }, { transform:'translateX(0)' }], { duration:300 });
+  toast('Tienes cambios sin guardar. Pulsa ✕ para salir sin guardar', true); }
 function cierra() { $('#modal').hidden = true; $('#modal').innerHTML = ''; if (cierra.fn) { const f = cierra.fn; cierra.fn = null; f(); } }
 function confirma(tit, txt, boton) { return new Promise(res => { const h = modal(`<h3>${esc(tit)}<button class="x">✕</button></h3><p class="ds">${esc(txt)}</p><div class="bts"><button class="btn" id="cNo">Cancelar</button><button class="btn mal" id="cSi">${esc(boton || 'Eliminar')}</button></div>`);
   let hecho = false; cierra.fn = () => { if (!hecho) res(false); };
@@ -421,7 +426,7 @@ function vAjustes() { const c = D.cfg, ks = listaLlaves(c.llaves);
 
 /* ---------- arranque ---------- */
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) cierra(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) fuera(); });
 (async function () {
   const par = new URLSearchParams(location.search).get('par');
   if (par) return modoPasarLlave(par);
