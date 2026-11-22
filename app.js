@@ -108,7 +108,7 @@ function estadoDe(l) {
 function enlacePago(imp) { const n = num(imp, 0), b = 'https://mypos.com/@' + D.cfg.tag; return n > 0 ? b + '/' + (n % 1 ? n.toFixed(2) : n) : b; }
 function waCliente(l) { let t = String(l.telefono || '').replace(/\D/g, ''); if (t.length === 9) t = '34' + t; const a = appDe(l.app);
   const txt = estadoDe(l).k === 'activas' ? `Hola ${l.cliente}, te escribo por tu licencia de ${a.nombre}.`
-    : `Hola ${l.cliente}, tu licencia de ${a.nombre} ${l.dias != null && l.dias < 0 ? 'venció' : 'vence'} el ${fecha(l.vence)}. Puedes renovarla aquí (${eur(l.precio)}): ${enlacePago(l.precio)}`;
+    : `Hola ${l.cliente}, tu licencia de ${a.nombre} ${l.dias != null && l.dias < 0 ? 'venció' : 'vence'} el ${fecha(l.vence)}. Puedes renovarla aquí (${eur(l.precio)}): ${enlacePago(l.precio)}\nAl pagar, escribe en el motivo del pago tu código ${l.codigo} y se renovará sola en unos minutos.`;
   return 'https://wa.me/' + t + '?text=' + encodeURIComponent(txt); }
 
 /* ---------- login ---------- */
@@ -191,9 +191,9 @@ $('#bInstalar').onclick = instalar; $('#bCompartir').onclick = compartir;
 const VISTAS = [['inicio', 'Inicio', 'inicio'], ['licencias', 'Licencias', 'lic'], ['apps', 'Apps', 'apps'], ['pagos', 'Pagos', 'pagos'], ['actividad', 'Actividad', 'act'], ['ajustes', 'Ajustes', 'aj']];
 function ir(v) { vista = v; pinta(); $('#main').scrollTop = 0; }
 function pinta() {
-  const malas = D.lics.filter(l => l.ef !== 'activa').length;
+  const malas = D.lics.filter(l => l.ef !== 'activa').length; const sinA = (D.mypos || []).filter(g => g.estado === 'sin asignar').length;
   $('#nav').innerHTML = `<div class="logo">${ESCUDO}<div><b>LICENCIAS</b><small>FUTURMOVIL</small></div></div>`
-    + VISTAS.map(v => `<button class="nb ${vista === v[0] ? 'on' : ''}" data-v="${v[0]}">${ic(v[2])}<span>${v[1]}</span>${v[0] === 'licencias' && malas ? `<em>${malas}</em>` : ''}</button>`).join('')
+    + VISTAS.map(v => `<button class="nb ${vista === v[0] ? 'on' : ''}" data-v="${v[0]}">${ic(v[2])}<span>${v[1]}</span>${v[0] === 'licencias' && malas ? `<em>${malas}</em>` : ''}${v[0] === 'pagos' && sinA ? `<em>${sinA}</em>` : ''}</button>`).join('')
     + `<button class="nb fin" id="nSalir">${ic('sal')}<span>Cerrar sesión</span></button>`;
   $('#nav').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { bip(520, .04); ir(b.dataset.v); });
   $('#nSalir').onclick = () => salir();
@@ -428,8 +428,33 @@ function editaApp(id) {
 /* ---------- pagos / actividad ---------- */
 function vPagos() { const ps = D.pagos.slice().reverse(), tot = ps.reduce((s, p) => s + num(p.importe, 0), 0);
   $('#main').innerHTML = `<div class="vista">${cab('PAGOS', ps.length + ' pagos apuntados · ' + eur(tot) + ' en total')}
-  <div class="card st">${ps.length ? `<div class="scrollx"><table class="tabla"><tr><th>Fecha</th><th>Cliente</th><th>App</th><th>Meses</th><th>Importe</th><th></th></tr>${ps.map(p => `<tr><td class="m">${fecha(p.fecha)}</td><td>${esc(p.cliente)}</td><td>${esc(appDe(p.app).nombre)}</td><td class="m">${esc(p.meses)}</td><td class="m c-ok">${eur(p.importe)}</td><td><button class="btn min mal" data-p="${p.id}">✕</button></td></tr>`).join('')}</table></div>` : `<div class="vacio">${ic('pagos')}Los pagos se apuntan solos cada vez que renuevas una licencia</div>`}</div></div>`;
+  ${tarjetaMypos()}<div class="card st" style="margin-top:14px">${ps.length ? `<div class="scrollx"><table class="tabla"><tr><th>Fecha</th><th>Cliente</th><th>App</th><th>Meses</th><th>Importe</th><th></th></tr>${ps.map(p => `<tr><td class="m">${fecha(p.fecha)}</td><td>${esc(p.cliente)}</td><td>${esc(appDe(p.app).nombre)}</td><td class="m">${esc(p.meses)}</td><td class="m c-ok">${eur(p.importe)}</td><td><button class="btn min mal" data-p="${p.id}">✕</button></td></tr>`).join('')}</table></div>` : `<div class="vacio">${ic('pagos')}Los pagos se apuntan solos cada vez que renuevas una licencia</div>`}</div></div>`;
+  eventosMypos();
   $('#main').querySelectorAll('[data-p]').forEach(b => b.onclick = async () => { if (await confirma('Borrar pago', 'Se quita este pago del registro. La fecha de vencimiento de la licencia no cambia.', 'Borrar')) { const r = await api('pagoBorrar', { id:b.dataset.p }); if (r.ok) { toast('Pago borrado'); pinta(); } } }); }
+// pagos que llegan por myPOS (los lee el servidor de tu Gmail cada 10 minutos)
+const horaDe = f => fecha(f) + ' ' + String(f || '').slice(11, 16);
+function tarjetaMypos() {
+  const mp = D.mypos || [], sin = mp.filter(g => g.estado === 'sin asignar'), hechos = mp.filter(g => g.estado !== 'sin asignar').slice(0, 8);
+  const opc = imp => D.lics.slice().sort((a, b) => (num(b.precio, 0) === num(imp, -1)) - (num(a.precio, 0) === num(imp, -1)) || String(a.cliente).localeCompare(String(b.cliente)))
+    .map(l => `<option value="${esc(l.codigo)}">${num(l.precio, 0) === num(imp, -1) ? '★ ' : ''}${esc(l.cliente)} · ${esc(appDe(l.app).nombre)} · ${eur(l.precio)}</option>`).join('');
+  return `<div class="card bloque st mpos"><h3>${ic('pagos')}Pagos myPOS automáticos<span class="chip ${D.myposOn ? 'c-ok' : 'c-warn'}" style="margin-left:auto">${D.myposOn ? 'Activo' : 'Sin activar'}</span></h3>
+  <p class="ds">${D.myposOn ? 'Cada 10 minutos se leen los avisos de pago de myPOS de tu Gmail y se renueva sola la licencia: por el código que el cliente escribe en el motivo o, si no lo pone, por el importe cuando solo hay una licencia pendiente con ese precio.' + (D.myposUlt ? ' Última revisión: ' + horaDe(D.myposUlt) + '.' : '') : 'Todavía no está activado en el servidor.'}</p>
+  ${sin.length ? `<h5 class="c-warn">Sin asignar (${sin.length})</h5>` + sin.map(g => `<div class="mp"><div class="g"><b>${eur(g.importe)} · ${esc(g.de || 'Sin nombre')}</b><small>${horaDe(g.fecha)} · motivo: «${esc(g.motivo || '—')}»</small><small class="c-warn">${esc(g.nota)}</small></div>
+    <div class="acc"><select class="in" data-sel="${esc(g.id)}"><option value="">Elige la licencia…</option>${opc(g.importe)}</select><button class="btn min ok" data-as="${esc(g.id)}">Asignar</button><button class="btn min" data-ig="${esc(g.id)}">Ignorar</button></div></div>`).join('') : ''}
+  ${hechos.length ? `<h5>Últimos pagos</h5>` + hechos.map(g => { const l = D.lics.find(x => x.codigo === g.codigo);
+    return `<div class="fila"><i class="pt ${g.estado === 'asignado' ? 'c-ok' : 'c-mal'}" style="animation:none"></i><div class="g"><b>${eur(g.importe)} · ${esc(l ? l.cliente : g.de || '—')}</b><small>${horaDe(g.fecha)} · ${esc(g.estado === 'asignado' ? '+' + (g.meses || 1) + ' mes' + (g.meses > 1 ? 'es' : '') + ' · ' + g.nota : g.nota)}</small></div></div>`; }).join('') : ''}
+  ${D.myposOn ? `<div class="bts" style="margin-top:12px"><button class="btn" id="bMp">${ic('rec')}Revisar correos ahora</button></div>` : ''}</div>`;
+}
+function eventosMypos() {
+  const b = $('#bMp');
+  if (b) b.onclick = async () => { b.disabled = true; b.textContent = 'Revisando…'; const r = await api('myposRevisar');
+    if (r.ok) toast(r.nuevos ? r.nuevos + (r.nuevos === 1 ? ' pago nuevo' : ' pagos nuevos') : 'No hay pagos nuevos'); else toast(r.error || 'No se ha podido revisar', true); pinta(); };
+  $('#main').querySelectorAll('[data-as]').forEach(x => x.onclick = async () => { const id = x.dataset.as, k = $(`[data-sel="${id}"]`).value;
+    if (!k) return toast('Elige la licencia de este pago', true);
+    const r = await api('myposAsignar', { id, codigo:k }); if (r.ok) { chispas(innerWidth / 2, innerHeight / 2); toast('Pago asignado y licencia renovada'); pinta(); } else toast(r.error, true); });
+  $('#main').querySelectorAll('[data-ig]').forEach(x => x.onclick = async () => {
+    if (await confirma('Ignorar pago', 'Este pago no renovará ninguna licencia. Úsalo para cobros que no son de licencias.', 'Ignorar')) { const r = await api('myposIgnorar', { id:x.dataset.ig }); if (r.ok) { toast('Pago ignorado'); pinta(); } else toast(r.error, true); } });
+}
 function vAct() { $('#main').innerHTML = `<div class="vista">${cab('ACTIVIDAD', 'Altas, renovaciones, bloqueos y accesos denegados')}<div class="card bloque st">${D.log.length ? D.log.map(filaLog).join('') : `<div class="vacio">${ic('act')}Todavía no hay actividad</div>`}</div></div>`; }
 
 /* ---------- ajustes ---------- */
