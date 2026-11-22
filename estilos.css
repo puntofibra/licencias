@@ -251,3 +251,15 @@ body.sinsel{-webkit-user-select:none;user-select:none}
 .appc .atop .sw{margin-left:auto;margin-top:9px}
 .appc.apagada h4,.appc.apagada .meta,.appc.apagada .atop .ico{opacity:.45}
 .appc.apagada{border-color:rgba(255,77,109,.3)}
+
+/* enlace de instalación */
+.enlbtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;margin-bottom:10px;border-radius:15px;border:1px solid rgba(61,245,255,.35);background:linear-gradient(135deg,rgba(61,245,255,.10),rgba(139,92,255,.10));transition:border-color .2s,box-shadow .2s,transform .15s}
+.enlbtn:hover{border-color:var(--cian);box-shadow:0 0 24px rgba(61,245,255,.18);transform:translateY(-1px)}
+.enlbtn .ei{flex:0 0 36px;height:36px;border-radius:11px;display:grid;place-items:center;background:rgba(61,245,255,.14);color:var(--cian)}
+.enlbtn .ei svg{width:18px;height:18px}
+.enlbtn .et{flex:1;min-width:0}
+.enlbtn .et b{display:block;font-size:13.5px}
+.enlbtn .et small{display:block;color:var(--sua);font-size:11.5px;line-height:1.35}
+.enlbtn .ef{font-size:22px;color:var(--cian);line-height:1}
+.cod.enl{letter-spacing:0;font-size:11.5px}
+.cod.enl span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
