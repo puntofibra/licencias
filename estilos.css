@@ -198,3 +198,7 @@ main{padding:18px 14px 40px}
 @keyframes sheet{from{transform:translateY(100%)}}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+.llave .lico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,rgba(61,245,255,.18),rgba(139,92,255,.18));border:1px solid var(--linea)}
+.llave .lico svg{width:18px;height:18px;color:var(--cian)}
+.llave .g small{font-family:var(--mono);letter-spacing:.06em}
