@@ -7,7 +7,7 @@
    ===================================================================== */
 (function () {
   'use strict';
-  var API = 'URL_API_LICENCIAS';
+  var API = 'https://script.google.com/macros/s/AKfycbxTaSviHO-j8OwVnQa0aPMeOYc4Q3pLr5tyAZ5IikVdsghZbFJ4pXtBKFdIIk9KGEZe/exec';
   var yo = document.currentScript || document.querySelector('script[data-licencia]');
   var APP = (yo && yo.getAttribute('data-app')) || '';
   var LIC = (yo && yo.getAttribute('data-licencia')) || '';
