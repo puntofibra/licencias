@@ -305,28 +305,72 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
   const nv = /edg\//i.test(ua) ? 'Edge' : /firefox/i.test(ua) ? 'Firefox' : /chrome/i.test(ua) ? 'Chrome' : /safari/i.test(ua) ? 'Safari' : ''; return so + (nv ? ' · ' + nv : ''); }
 
 /* ---------- integración ---------- */
+// Loader de Tampermonkey: guarda el código del script y solo pregunta al servidor cada REVISA horas,
+// así arranca al instante y no llama al servidor en cada página que abre el cliente.
+const REVISA_H = 6;
 function loader(l, a) {
-  return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      1.0', '// @description  ' + a.nombre,
-  ...(urlsDe(a.url).length ? urlsDe(a.url) : ['*://*/*']).map(u => '// @match        ' + u), '// @grant        GM_xmlhttpRequest', '// @grant        GM_getValue', '// @grant        GM_setValue', '// @grant        GM_addStyle', '// @grant        unsafeWindow',
-  '// @connect      script.google.com', '// @connect      script.googleusercontent.com', '// @run-at       document-idle', '// ==/UserScript==', '',
-  '(function () {', "  'use strict';", "  var API = '" + API + "', APP = '" + a.id + "', LIC = '" + l.codigo + "';",
-  "  var dev = GM_getValue('lic_dev', ''); if (!dev) { dev = 'tm-' + Math.random().toString(36).slice(2) + Date.now().toString(36); GM_setValue('lic_dev', dev); }",
-  "  function lanza(code) { try { (new Function('GM_xmlhttpRequest', 'GM_getValue', 'GM_setValue', 'GM_addStyle', 'unsafeWindow', code))(GM_xmlhttpRequest, GM_getValue, GM_setValue, GM_addStyle, unsafeWindow); } catch (e) { console.error('[' + APP + ']', e); } }",
-  '  function aviso(r) {', "    var d = document.createElement('div');",
-  "    d.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#000;color:#17ff5f;border:1px solid #17ff5f;box-shadow:0 0 24px rgba(23,255,95,.45);font:13px/1.5 monospace;padding:16px 18px;border-radius:10px;max-width:320px;text-shadow:0 0 6px rgba(23,255,95,.6)';",
-  "    var h = '<b style=\"font-size:15px\">\\uD83D\\uDC80 ' + (r.app || APP) + '</b><br>' + (r.msg || 'Licencia no válida') + '<br>';",
-  "    if (r.pago && (r.estado === 'vencida' || r.estado === 'bloqueada')) h += '<a href=\"' + r.pago + '\" target=\"_blank\" style=\"display:inline-block;margin:10px 8px 0 0;padding:7px 12px;background:#17ff5f;color:#000;text-decoration:none;font-weight:bold;border-radius:6px;text-shadow:none\">PAGAR ' + (r.importe ? r.importe + ' \\u20AC' : '') + '</a>';",
-  "    if (r.soporte) h += '<a href=\"' + r.soporte + '\" target=\"_blank\" style=\"display:inline-block;margin-top:10px;padding:7px 12px;border:1px solid #17ff5f;color:#17ff5f;text-decoration:none;border-radius:6px\">SOPORTE</a>';",
-  "    d.innerHTML = h; document.body.appendChild(d);", '  }',
-  "  function reserva() { try { var c = JSON.parse(GM_getValue('lic_cache', '') || 'null'); if (c && Date.now() - c.t < 172800000) lanza(c.code); } catch (e) {} }",
-  '  GM_xmlhttpRequest({', "    method: 'GET', url: API + '?a=script&k=' + LIC + '&app=' + APP + '&d=' + dev + '&ua=' + encodeURIComponent(navigator.userAgent), timeout: 25000,",
-  '    onload: function (x) {', '      var r; try { r = JSON.parse(x.responseText); } catch (e) { return reserva(); }',
-  "      if (r.ok && r.code) { GM_setValue('lic_cache', JSON.stringify({ t: Date.now(), code: r.code })); lanza(r.code); }", "      else { GM_setValue('lic_cache', ''); aviso(r); }", '    },',
-  '    onerror: reserva, ontimeout: reserva', '  });', '})();', ''].join('\n');
+  const m = urlsDe(a.url), gr = ['GM_xmlhttpRequest', 'GM_getValue', 'GM_setValue', 'GM_deleteValue', 'GM_listValues', 'GM_addStyle', 'GM_openInTab', 'GM_setClipboard', 'GM_notification', 'GM_registerMenuCommand', 'unsafeWindow'];
+  return ['// ==UserScript==', '// @name         ' + a.nombre, '// @namespace    futurmovil', '// @version      2.0', '// @description  ' + a.nombre,
+  ...(m.length ? m : ['*://*/*']).map(u => '// @match        ' + u), ...gr.map(g => '// @grant        ' + g),
+  '// @connect      script.google.com', '// @connect      script.googleusercontent.com', '// @run-at       document-start', '// ==/UserScript==', ''].join('\n') + String.raw`
+(function () {
+  'use strict';
+  var API = '${API}', APP = '${a.id}', LIC = '${l.codigo}';
+  var REVISA = ${REVISA_H} * 3600000;   // comprueba la licencia cada ${REVISA_H} horas
+  var SIN_RED = 3 * 86400000;         // sin conexión con el servidor, sigue funcionando 3 días
+  var NOMBRES = ['${gr.join("', '")}'];
+  var VALORES = [${gr.join(', ')}];
+  var dev = GM_getValue('lic_dev', '');
+  if (!dev) { dev = 'tm-' + Math.random().toString(36).slice(2) + Date.now().toString(36); GM_setValue('lic_dev', dev); }
+
+  // respeta el @run-at del script original
+  function cuando(run, fn) {
+    if (run === 'document-start') return fn();
+    if (document.readyState !== 'loading') return run === 'document-idle' ? setTimeout(fn, 0) : fn();
+    document.addEventListener('DOMContentLoaded', function () { run === 'document-idle' ? setTimeout(fn, 0) : fn(); }, { once: true });
+  }
+  function runAt(code) { var r = /\/\/\s*@run-at\s+(document-(?:start|end|idle|body))/.exec(code); return r ? (r[1] === 'document-body' ? 'document-end' : r[1]) : 'document-idle'; }
+  var lanzado = false;
+  function lanza(c) {
+    if (lanzado || !c || !c.code) return; lanzado = true;
+    cuando(c.run, function () { try { Function.apply(null, NOMBRES.concat(c.code)).apply(null, VALORES); } catch (e) { console.error('[' + APP + ']', e); } });
+  }
+  function aviso(r) {
+    cuando('document-end', function () {
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#000;color:#17ff5f;border:1px solid #17ff5f;box-shadow:0 0 24px rgba(23,255,95,.45);font:13px/1.5 monospace;padding:16px 18px;border-radius:10px;max-width:320px;text-shadow:0 0 6px rgba(23,255,95,.6)';
+      var h = '<b style="font-size:15px">💀 ' + (r.app || APP) + '</b><br>' + (r.msg || 'Licencia no válida') + '<br>';
+      if (r.pago && (r.estado === 'vencida' || r.estado === 'bloqueada')) h += '<a href="' + r.pago + '" target="_blank" style="display:inline-block;margin:10px 8px 0 0;padding:7px 12px;background:#17ff5f;color:#000;text-decoration:none;font-weight:bold;border-radius:6px;text-shadow:none">PAGAR ' + (r.importe ? r.importe + ' €' : '') + '</a>';
+      if (r.soporte) h += '<a href="' + r.soporte + '" target="_blank" style="display:inline-block;margin-top:10px;padding:7px 12px;border:1px solid #17ff5f;color:#17ff5f;text-decoration:none;border-radius:6px">SOPORTE</a>';
+      d.innerHTML = h; document.body.appendChild(d);
+    });
+  }
+
+  var c = null;
+  try { c = JSON.parse(GM_getValue('lic_cache', '') || 'null'); } catch (e) {}
+  if (c && c.lic !== LIC) c = null;
+  var edad = c ? Date.now() - c.t : Infinity;
+  if (c && edad < SIN_RED) lanza(c);       // arranca al instante con la copia guardada
+  if (c && edad < REVISA) return;          // comprobada hace poco: no se llama al servidor
+  var no = null;
+  try { no = JSON.parse(GM_getValue('lic_no', '') || 'null'); } catch (e) {}
+  if (!c && no && no.lic === LIC && Date.now() - no.t < 600000) return aviso(no.r);   // bloqueada: vuelve a preguntar a los 10 min
+
+  GM_xmlhttpRequest({
+    method: 'GET', url: API + '?a=script&k=' + LIC + '&app=' + APP + '&d=' + dev + '&ua=' + encodeURIComponent(navigator.userAgent), timeout: 25000,
+    onload: function (x) {
+      var r; try { r = JSON.parse(x.responseText); } catch (e) { return; }
+      if (r.ok && r.code) { var n = { t: Date.now(), lic: LIC, code: r.code, run: runAt(r.code) }; GM_setValue('lic_cache', JSON.stringify(n)); GM_setValue('lic_no', ''); lanza(n); }
+      else { GM_setValue('lic_cache', ''); GM_setValue('lic_no', JSON.stringify({ t: Date.now(), lic: LIC, r: r })); aviso(r); }
+    },
+    onerror: function () {}, ontimeout: function () {}
+  });
+})();
+`;
 }
 function integra(l, a) {
   if (a.tipo === 'script') { const txt = loader(l, a), nom = a.id + '-' + l.codigo.slice(0, 4).toLowerCase() + '.user.js';
-    const h = modal(`<h3>Loader de ${esc(l.cliente)}<button class="x">✕</button></h3><p class="ds">Este es el archivo que instala el cliente en Tampermonkey. Lleva su licencia dentro y solo descarga el script real del servidor si está al día de pago. ${D.scripts[a.id] ? '' : '<b class="c-warn">Ojo: todavía no has subido el código del script (pestaña Apps).</b>'}</p><pre class="code">${esc(txt)}</pre><div class="bts"><button class="btn" id="iC">${ic('copia')}Copiar</button><button class="btn pri" id="iD">${ic('inst')}DESCARGAR</button></div>`);
+    const h = modal(`<h3>Loader de ${esc(l.cliente)}<button class="x">✕</button></h3><p class="ds">Este es el archivo que instala el cliente en Tampermonkey. Lleva su licencia dentro, guarda el script real y comprueba el pago cada ${REVISA_H} horas: si deja de pagar, se bloquea en la siguiente comprobación. ${D.scripts[a.id] ? '' : '<b class="c-warn">Ojo: todavía no has subido el código del script (pestaña Apps).</b>'}</p><pre class="code">${esc(txt)}</pre><div class="bts"><button class="btn" id="iC">${ic('copia')}Copiar</button><button class="btn pri" id="iD">${ic('inst')}DESCARGAR</button></div>`);
     h.querySelector('#iC').onclick = () => copia(txt, 'Loader copiado'); h.querySelector('#iD').onclick = () => baja(nom, txt); return; }
   const s1 = `<script src="${URL_PANEL}licencia.js" data-app="${a.id}" data-licencia="${l.codigo}"><\/script>`;
   const s2 = `// Pega esto en el Code.gs de la app del cliente\nfunction licenciaOK_() {\n  var c = CacheService.getScriptCache(), v = c.get('licencia');\n  if (!v) {\n    try {\n      v = UrlFetchApp.fetch('${API}?a=check&k=${l.codigo}&app=${a.id}&d=servidor', { muteHttpExceptions: true }).getContentText();\n      c.put('licencia', v, 600);\n    } catch (e) { return { ok: true }; }\n  }\n  try { return JSON.parse(v); } catch (e) { return { ok: true }; }\n}\n\n// Y al principio de doGet / de cada función del servidor:\n//   var lic = licenciaOK_();\n//   if (!lic.ok) return ContentService.createTextOutput(JSON.stringify({ ok: false, licencia: lic }));`;
