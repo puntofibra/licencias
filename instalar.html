@@ -81,6 +81,13 @@ h1 span{background:linear-gradient(90deg,var(--cian),var(--vio));-webkit-backgro
 .scr.nueva .ico{background:rgba(255,197,61,.14);color:var(--warn)}
 .scr.nueva .nm small{color:var(--warn)}
 .scr.nueva .btn{color:#1a1200;background:linear-gradient(135deg,#ffd666,#ffb020);box-shadow:0 6px 22px rgba(255,176,32,.3)}
+.scr.pend{border-color:rgba(61,245,255,.35);border-style:dashed}
+.scr.pend .ico{background:rgba(61,245,255,.12);color:var(--cian)}
+.scr.pend .nm small{color:var(--cian)}
+.scr.pend .btn{background:transparent;color:var(--cian);border:1px solid rgba(61,245,255,.4);box-shadow:none}
+.scr.hecho .nm small{color:var(--ok)}
+.vivo{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px;box-shadow:0 0 0 0 rgba(43,255,154,.6);animation:latido 1.8s infinite}
+@keyframes latido{70%{box-shadow:0 0 0 7px rgba(43,255,154,0)}100%{box-shadow:0 0 0 0 rgba(43,255,154,0)}}
 .upd{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:11px 13px;border-radius:14px;background:rgba(255,197,61,.08);border:1px solid rgba(255,197,61,.35);color:#ffe2a0;font-size:13px}
 .upd svg{flex:0 0 18px;height:18px;color:var(--warn);margin-top:1px}
 .prog{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:12.5px;color:var(--sua)}
@@ -203,7 +210,7 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
         </div></li>
         <li class="paso" id="p3"><div class="num">3</div><div>
           <h2>Confirma en Tampermonkey</h2>
-          <p>En la pestaña que se abre, pulsa el botón <b>Instalar</b>${uno ? '' : ' (una vez por cada script)'}. Después, <b>recarga la página</b> donde usas el script y listo.</p>
+          <p>En la pestaña que se abre, pulsa el botón <b>Instalar</b>${uno ? '' : ' (una vez por cada script)'}. Después, <b>abre o recarga la página</b> donde usas el script. Cuando arranque por primera vez, aquí verás <b style="color:var(--ok)">Funcionando</b>.</p>
           <div class="mock"><div class="tb"><i></i><i></i><i></i>&nbsp;Tampermonkey</div><div class="bd"><span>${esc(limpia(r.lista[0].nombre))}</span><b>Instalar</b></div></div>
         </div></li>
       </ol>
@@ -226,19 +233,23 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
     $('#bCopia').onclick = async () => { try { await navigator.clipboard.writeText('chrome://extensions'); toast('Dirección copiada'); } catch (e) { toast('Escribe: chrome://extensions'); } };
     let aviso = null;
     // estado de cada script: sin instalar, instalado (misma versión) o con versión nueva
-    const est = i => { const s = r.lista[i], v = hechos[s.archivo]; return !v ? 'no' : (v === (s.version || '1') ? 'ok' : 'nueva'); };
+    // ok = ya ha funcionado en su ordenador (lo confirma el servidor) · pend = pulsó Instalar pero aún no ha arrancado
+    const est = i => { const s = r.lista[i], v = hechos[s.archivo];
+      if (v && v !== (s.version || '1')) return 'nueva';
+      if (s.activo) return 'ok';
+      return v ? 'pend' : 'no'; };
     const refresca = () => {
       let c = 0, nuevas = 0;
       card.querySelectorAll('.scr').forEach(el => {
         const e = est(+el.dataset.i), b = el.querySelector('.btn'), sm = el.querySelector('.nm small');
-        el.classList.toggle('hecho', e === 'ok'); el.classList.toggle('nueva', e === 'nueva');
-        b.innerHTML = e === 'ok' ? ICO.ok + 'Instalado' : e === 'nueva' ? ICO.upd + 'Actualizar' : ICO.tm + 'Instalar';
-        b.title = e === 'ok' ? 'Pulsa otra vez si necesitas reinstalarlo' : '';
-        sm.textContent = e === 'nueva' ? 'Nueva versión disponible' : 'Script de Tampermonkey';
+        el.classList.toggle('hecho', e === 'ok'); el.classList.toggle('nueva', e === 'nueva'); el.classList.toggle('pend', e === 'pend');
+        b.innerHTML = e === 'ok' ? ICO.ok + 'Instalado' : e === 'nueva' ? ICO.upd + 'Actualizar' : e === 'pend' ? ICO.tm + 'Reinstalar' : ICO.tm + 'Instalar';
+        b.title = e === 'ok' ? 'Pulsa otra vez si necesitas reinstalarlo' : e === 'pend' ? 'Si no llegaste a confirmar en Tampermonkey, púlsalo otra vez' : '';
+        sm.innerHTML = e === 'nueva' ? 'Nueva versión disponible' : e === 'ok' ? '<span class="vivo"></span>Funcionando en tu ordenador' : e === 'pend' ? 'Pendiente · abre la web donde lo usas para activarlo' : 'Script de Tampermonkey';
         if (e === 'ok') c++; if (e === 'nueva') nuevas++;
       });
       $('#upd').hidden = !nuevas;
-      if ($('#barra')) { $('#barra').style.width = (c / n * 100) + '%'; $('#cuenta').textContent = c + ' de ' + n + (nuevas ? ' · ' + nuevas + ' por actualizar' : ''); }
+      if ($('#barra')) { $('#barra').style.width = (c / n * 100) + '%'; $('#cuenta').textContent = c + ' de ' + n + ' funcionando' + (nuevas ? ' · ' + nuevas + ' por actualizar' : ''); }
       if (c || nuevas) { paso2(); p3.classList.add('act'); }
       p2.classList.toggle('ok', c >= n); if (c >= n) p2.classList.remove('act'); else if (c || nuevas) p2.classList.add('act');
     };
@@ -248,6 +259,19 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
       aviso = setTimeout(() => { if (document.hasFocus()) { const a = $('#ayuda'); if (a && !a.open) { a.open = true; toast('¿No se ha abierto Tampermonkey? Mira la ayuda'); } } }, 6000);
     }));
     window.addEventListener('blur', () => clearTimeout(aviso));
+    // vuelve a preguntar al servidor qué scripts ya funcionan (al volver a esta pestaña y cada 20 s mientras haya pendientes)
+    const t0 = Date.now(); let pidiendo = false;
+    const recarga = () => {
+      if (pidiendo || document.hidden) return; pidiendo = true;
+      fetch(API + '?a=instInfo&t=' + encodeURIComponent(k), { redirect: 'follow' }).then(x => x.json()).then(x => {
+        if (x && x.ok && x.lista) x.lista.forEach(nv => { const s = r.lista.find(y => y.archivo === nv.archivo); if (s) { s.activo = nv.activo; s.version = nv.version; } });
+        refresca();
+      }).catch(() => {}).finally(() => { pidiendo = false; });
+    };
+    const hayPend = () => r.lista.some((s, i) => est(i) === 'pend');
+    setInterval(() => { if (hayPend() && Date.now() - t0 < 1800000) recarga(); }, 20000);
+    window.addEventListener('focus', recarga);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) recarga(); });
     refresca();
   }
 })();
