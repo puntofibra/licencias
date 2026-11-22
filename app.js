@@ -398,24 +398,28 @@ function vApps() {
 }
 // Mantener pulsada una tarjeta medio segundo la coge; se arrastra y al soltarla se guarda el orden
 function ordenable(grid, sel, key, leer, guardar, abrir) {
-  let timer = null, sx = 0, sy = 0, card = null, arrastra = false, ini = '';
+  let timer = null, sx = 0, sy = 0, gx = 0, gy = 0, card = null, arrastra = false, ini = '';
+  // la tarjeta cogida va pegada al ratón o al dedo
+  const sigue = (c, x, y) => { const g = grid.getBoundingClientRect();
+    c.style.setProperty('transform', `translate(${x - gx - g.left - c.offsetLeft}px,${y - gy - g.top - c.offsetTop}px) scale(1.05)`, 'important'); };
   const fin = async () => { clearTimeout(timer); const c = card; card = null; if (!c || !arrastra) return;
-    arrastra = false; c.classList.remove('coge'); grid.classList.remove('ordenando'); document.body.classList.remove('sinsel');
+    arrastra = false; c.style.removeProperty('transform'); c.classList.remove('coge'); grid.classList.remove('ordenando'); document.body.classList.remove('sinsel');
     const ids = leer(); if (ids.join() === ini) return;
     const r = await guardar(ids); if (r && r.ok) toast('Orden guardado'); else { toast((r && r.error) || 'No se ha podido guardar el orden', true); pinta(); } };
   grid.querySelectorAll(sel).forEach(c => {
     c.onclick = () => { if (c.dataset.movido) { delete c.dataset.movido; return; } abrir(c.dataset[key]); };
     c.oncontextmenu = e => e.preventDefault();
     c.onpointerdown = e => { if (e.button > 0) return; card = c; sx = e.clientX; sy = e.clientY; ini = leer().join(); clearTimeout(timer);
-      timer = setTimeout(() => { if (card !== c) return; arrastra = true; c.dataset.movido = '1'; c.style.transform = ''; c.classList.add('coge'); grid.classList.add('ordenando'); document.body.classList.add('sinsel');
+      timer = setTimeout(() => { if (card !== c) return; arrastra = true; c.dataset.movido = '1'; const r0 = c.getBoundingClientRect(); gx = sx - r0.left; gy = sy - r0.top; c.classList.add('coge'); sigue(c, sx, sy); grid.classList.add('ordenando'); document.body.classList.add('sinsel');
         if (navigator.vibrate) navigator.vibrate(40); bip(520, .04); try { c.setPointerCapture(e.pointerId); } catch (x) {} }, 450); };
     c.onpointermove = e => { if (card !== c) return;
       if (!arrastra) { if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 10) { clearTimeout(timer); card = null; } return; }
       e.preventDefault();
       const otro = document.elementsFromPoint(e.clientX, e.clientY).map(el => el.closest && el.closest(sel)).find(el => el && el !== c && el.parentNode === grid);
-      if (!otro) return;
-      const r = otro.getBoundingClientRect();
-      grid.insertBefore(c, e.clientX < r.left + r.width / 2 ? otro : otro.nextSibling); };
+      if (otro) { const r = otro.getBoundingClientRect(), antes = [...grid.children].indexOf(otro) < [...grid.children].indexOf(c);
+        if (antes ? e.clientX < r.right - r.width * .35 || e.clientY < r.top + r.height * .35 : e.clientX > r.left + r.width * .35 || e.clientY > r.bottom - r.height * .35)
+          grid.insertBefore(c, antes ? otro : otro.nextSibling); }
+      sigue(c, e.clientX, e.clientY); };
     c.onpointerup = c.onpointercancel = fin;
   });
 }
