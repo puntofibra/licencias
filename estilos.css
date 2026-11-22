@@ -233,3 +233,5 @@ main{padding:18px 14px 40px}
 body.sinsel{-webkit-user-select:none;user-select:none}
 .gapp{position:relative}
 .ordenando .card:not(.coge){transition:transform .2s,opacity .2s}
+.pkbus{margin-bottom:8px;padding:9px 13px;font-size:13px}
+#pkVacio{padding:6px 2px;margin:0}
