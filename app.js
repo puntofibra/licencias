@@ -348,6 +348,7 @@ function loader(l, a) {
     cuando(c.run, function () { try { Function.apply(null, NOMBRES.concat(c.code)).apply(null, VALORES); } catch (e) { console.error('[' + APP + ']', e); } });
   }
   function aviso(r) {
+    if (r.estado === 'apagada') return errorConexion();
     cuando('document-end', function () {
       var d = document.createElement('div');
       d.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#000;color:#17ff5f;border:1px solid #17ff5f;box-shadow:0 0 24px rgba(23,255,95,.45);font:13px/1.5 monospace;padding:16px 18px;border-radius:10px;max-width:320px;text-shadow:0 0 6px rgba(23,255,95,.6)';
@@ -355,6 +356,40 @@ function loader(l, a) {
       if (r.pago && (r.estado === 'vencida' || r.estado === 'bloqueada')) h += '<a href="' + r.pago + '" target="_blank" style="display:inline-block;margin:10px 8px 0 0;padding:7px 12px;background:#17ff5f;color:#000;text-decoration:none;font-weight:bold;border-radius:6px;text-shadow:none">PAGAR ' + (r.importe ? r.importe + ' €' : '') + '</a>';
       if (r.soporte) h += '<a href="' + r.soporte + '" target="_blank" style="display:inline-block;margin-top:10px;padding:7px 12px;border:1px solid #17ff5f;color:#17ff5f;text-decoration:none;border-radius:6px">SOPORTE</a>';
       d.innerHTML = h; document.body.appendChild(d);
+    });
+  }
+
+  // si la app está apagada se enseña como un fallo de conexión (como mucho una vez cada 10 minutos)
+  function errorConexion() {
+    if (Date.now() - (+GM_getValue('lic_err', 0) || 0) < 600000) return;
+    GM_setValue('lic_err', Date.now());
+    cuando('document-end', function () {
+      var st = document.createElement('style');
+      st.textContent = '#fmx-err{position:fixed;right:18px;bottom:18px;z-index:2147483647;width:340px;max-width:calc(100vw - 36px);background:rgba(12,14,22,.94);backdrop-filter:blur(10px);border:1px solid rgba(255,90,90,.35);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.04) inset;font:13px/1.5 system-ui,Segoe UI,Roboto,sans-serif;color:#e8ecf5;padding:16px 16px 14px;overflow:hidden;animation:fmxIn .45s cubic-bezier(.2,1.4,.4,1)}'
+        + '#fmx-err:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);pointer-events:none}'
+        + '@keyframes fmxIn{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}'
+        + '#fmx-err .t{display:flex;align-items:center;gap:11px;margin-bottom:6px}'
+        + '#fmx-err .i{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:rgba(255,90,90,.12);border:1px solid rgba(255,90,90,.35);animation:fmxPulso 1.6s ease-in-out infinite;flex:none}'
+        + '@keyframes fmxPulso{50%{box-shadow:0 0 0 7px rgba(255,90,90,0)}0%,100%{box-shadow:0 0 0 0 rgba(255,90,90,.35)}}'
+        + '#fmx-err .i svg{width:20px;height:20px;stroke:#ff6b6b;fill:none;stroke-width:2;stroke-linecap:round}'
+        + '#fmx-err b{font-size:15px;letter-spacing:.02em;animation:fmxGlitch 3s infinite}'
+        + '@keyframes fmxGlitch{0%,92%,100%{text-shadow:none;transform:none}93%{text-shadow:2px 0 #ff3b6b,-2px 0 #3bd5ff;transform:translateX(1px)}95%{text-shadow:-2px 0 #ff3b6b,2px 0 #3bd5ff;transform:translateX(-1px)}}'
+        + '#fmx-err p{margin:0 0 10px;color:#a9b1c4}'
+        + '#fmx-err code{display:block;font:11px/1.4 ui-monospace,Consolas,monospace;color:#ff8a8a;opacity:.85;margin-bottom:10px}'
+        + '#fmx-err .bar{height:3px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}'
+        + '#fmx-err .bar i{display:block;height:100%;width:40%;background:linear-gradient(90deg,transparent,#ff6b6b,transparent);animation:fmxBar 1.3s linear infinite}'
+        + '@keyframes fmxBar{from{transform:translateX(-100%)}to{transform:translateX(250%)}}'
+        + '#fmx-err .r{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:11.5px;color:#7d869b}'
+        + '#fmx-err .x{position:absolute;top:10px;right:12px;background:none;border:0;color:#7d869b;font-size:16px;cursor:pointer;padding:2px 4px}#fmx-err .x:hover{color:#fff}';
+      document.head.appendChild(st);
+      var d = document.createElement('div'); d.id = 'fmx-err';
+      var n = 500 + Math.floor(Math.random() * 4);
+      d.innerHTML = '<button class="x" title="Cerrar">&times;</button><div class="t"><div class="i"><svg viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0M12 20h.01M3 3l18 18"/></svg></div><b>Error de conexión</b></div>'
+        + '<p>No se ha podido conectar con el servidor. Inténtalo de nuevo más tarde.</p><code>ERR_CONNECTION_TIMED_OUT · HTTP ' + n + '</code>'
+        + '<div class="bar"><i></i></div><div class="r"><span>Reintentando…</span><span>' + new Date().toLocaleTimeString().slice(0, 5) + '</span></div>';
+      document.body.appendChild(d);
+      var fuera = function () { d.style.transition = 'opacity .4s, transform .4s'; d.style.opacity = '0'; d.style.transform = 'translateY(16px)'; setTimeout(function () { d.remove(); st.remove(); }, 450); };
+      d.querySelector('.x').onclick = fuera; setTimeout(fuera, 12000);
     });
   }
 
@@ -395,7 +430,8 @@ function integra(l, a) {
 /* ---------- apps ---------- */
 function vApps() {
   const tarjeta = (a, i) => { const ls = D.lics.filter(l => idsDe(l.app).includes(a.id)), act = ls.filter(l => l.ef === 'activa'), kb = D.scripts[a.id];
-    return `<div class="card appc tilt st" style="--i:${i}" data-a="${a.id}"><div class="brillo"></div><div class="ico">${ic(a.tipo === 'script' ? 'scr' : 'web')}</div><h4>${esc(a.nombre)}</h4>
+    const off = a.estado === 'apagada';
+    return `<div class="card appc tilt st ${off ? 'apagada' : ''}" style="--i:${i}" data-a="${a.id}"><div class="brillo"></div><div class="atop"><div class="ico">${ic(a.tipo === 'script' ? 'scr' : 'web')}</div>${off ? '<span class="chip c-mal">Apagada</span>' : ''}${a.tipo === 'script' ? `<button class="sw ${off ? '' : 'on'}" title="Encender / apagar para todos los clientes"></button>` : ''}</div><h4>${esc(a.nombre)}</h4>
     <span style="font-size:11.5px;color:var(--sua)">${a.tipo === 'script' ? 'Script Tampermonkey' : 'Aplicación web'} · id <span style="font-family:var(--mono);color:var(--cian)">${a.id}</span></span>
     <div class="meta" style="margin-top:14px"><span>Licencias <b>${ls.length}</b></span><span>Activas <b class="c-ok">${act.length}</b></span><span>Mensual <b>${eur(act.reduce((s, l) => s + num(l.precio, 0), 0))}</b></span></div>
     ${a.tipo === 'script' ? `<div class="meta" style="margin-top:8px"><span>Código: <b class="${kb ? 'c-ok' : 'c-warn'}">${kb ? Math.round(kb / 102.4) / 10 + ' KB subido' : 'sin subir'}</b></span></div>` : ''}</div>`; };
@@ -406,7 +442,11 @@ function vApps() {
   ${D.apps.length ? '' : `<div class="vacio">${ic('caja')}Da de alta tu primera app o script con el botón NUEVA</div>`}</div>`;
   $('#bNApp').onclick = () => editaApp();
   const todas = () => [...$('#main').querySelectorAll('[data-a]')].map(c => c.dataset.a);
-  $('#main').querySelectorAll('.gapp').forEach(g => ordenable(g, '[data-a]', 'a', todas, ids => api('appsOrden', { ids }), id => editaApp(id)));
+  $('#main').querySelectorAll('.gapp').forEach(g => ordenable(g, '[data-a]', 'a', todas, ids => api('appsOrden', { ids }), (id, e) => e && e.target.closest('.sw') ? onOffApp(id) : editaApp(id)));
+}
+async function onOffApp(id) { const a = app1(id), off = a.estado !== 'apagada';
+  if (off && !await confirma('Apagar ' + a.nombre, 'Dejará de funcionar para todos los clientes que lo usan, aunque tengan la licencia pagada, en su próxima comprobación (como mucho 3 horas). Les saldrá un aviso de «Error de conexión». El resto de scripts de su licencia seguirán funcionando.', 'Apagar')) return;
+  const r = await api('appEstado', { id, estado: off ? 'apagada' : '' }); if (r.ok) { toast(off ? 'Aplicación apagada' : 'Aplicación encendida', off); pinta(); } else toast(r.error || 'No se ha podido cambiar', true);
 }
 // Mantener pulsada una tarjeta medio segundo la coge; se arrastra y al soltarla se guarda el orden
 function ordenable(grid, sel, key, leer, guardar, abrir) {
@@ -419,7 +459,7 @@ function ordenable(grid, sel, key, leer, guardar, abrir) {
     const ids = leer(); if (ids.join() === ini) return;
     const r = await guardar(ids); if (r && r.ok) toast('Orden guardado'); else { toast((r && r.error) || 'No se ha podido guardar el orden', true); pinta(); } };
   grid.querySelectorAll(sel).forEach(c => {
-    c.onclick = () => { if (c.dataset.movido) { delete c.dataset.movido; return; } abrir(c.dataset[key]); };
+    c.onclick = e => { if (c.dataset.movido) { delete c.dataset.movido; return; } abrir(c.dataset[key], e); };
     c.oncontextmenu = e => e.preventDefault();
     c.onpointerdown = e => { if (e.button > 0) return; card = c; sx = e.clientX; sy = e.clientY; ini = leer().join(); clearTimeout(timer);
       timer = setTimeout(() => { if (card !== c) return; arrastra = true; c.dataset.movido = '1'; const r0 = c.getBoundingClientRect(); gx = sx - r0.left; gy = sy - r0.top; c.classList.add('coge'); sigue(c, sx, sy); grid.classList.add('ordenando'); document.body.classList.add('sinsel');
