@@ -263,3 +263,11 @@ body.sinsel{-webkit-user-select:none;user-select:none}
 .enlbtn .ef{font-size:22px;color:var(--cian);line-height:1}
 .cod.enl{letter-spacing:0;font-size:11.5px}
 .cod.enl span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+
+/* campana: avisos de pago por script */
+.campana{flex:none;width:46px;border-radius:13px;border:1px solid var(--linea);background:rgba(5,8,18,.5);display:grid;place-items:center;cursor:pointer;transition:.2s}
+.campana svg{width:20px;height:20px;fill:none;stroke:#3df5ff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.8;transition:.2s}
+.campana:hover svg{opacity:1}
+.campana.on{border-color:rgba(255,77,109,.45);background:rgba(255,77,109,.08)}
+.campana.on svg{stroke:#ff4d6d;opacity:1;filter:drop-shadow(0 0 6px rgba(255,77,109,.6))}
+.campana:active{transform:scale(.88)}
