@@ -525,7 +525,7 @@ function editaApp(id) {
   const h = modal(`<h3>${id ? esc(a.nombre) : 'Nueva aplicación'}<button class="x">✕</button></h3><p class="ds">${id ? 'Identificador: ' + id : 'Una app o juego que vendes a clientes, o un script de Tampermonkey.'}</p>
   <form id="fApp"><div class="campo"><label>Nombre</label><input class="in" name="nombre" value="${esc(a.nombre)}" required placeholder="Ej. Panel Puntofibra"></div>
   <div class="par"><div class="campo"><label>Tipo</label><select class="in" name="tipo"><option value="web" ${a.tipo !== 'script' ? 'selected' : ''}>Aplicación web</option><option value="script" ${a.tipo === 'script' ? 'selected' : ''}>Script Tampermonkey</option></select></div>
-  <div class="campo"><label>Mensualidad (€)</label><input class="in" name="precio" inputmode="decimal" value="${esc(a.precio)}"></div></div>
+  <div class="campo"><label>Mensualidad sugerida (€)</label><input class="in" name="precio" inputmode="decimal" value="${esc(a.precio)}" placeholder="Solo de referencia"></div></div>
   <div class="campo"><label id="lUrl"></label><div id="lstUrl"></div><button class="btn min w" type="button" id="bUrl" style="margin-top:6px">${ic('mas')}Añadir otra dirección</button><input type="hidden" name="url"></div>
   <div class="campo"><label>Notas</label><input class="in" name="notas" value="${esc(a.notas)}"></div>
   <button class="btn pri w" type="submit">GUARDAR</button></form>
