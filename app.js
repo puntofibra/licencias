@@ -262,7 +262,7 @@ function editaLic(k) {
   const l = k ? D.lics.find(x => x.codigo === k) : { app:fApp || D.apps[0].id, cliente:'', telefono:'', email:'', precio:'', vence:'', maxDisp:'', gracia:'', notas:'' };
   const d1 = new Date(); d1.setMonth(d1.getMonth() + 1); const def = d1.getFullYear() + '-' + String(d1.getMonth() + 1).padStart(2, '0') + '-' + String(d1.getDate()).padStart(2, '0');
   const h = modal(`<h3>${k ? 'Editar licencia' : 'Nueva licencia'}<button class="x">✕</button></h3><p class="ds">${k ? 'Código ' + k : 'El código se genera solo al guardar.'}</p>
-  <form id="fLic"><div class="campo"><label>Aplicaciones <b id="pkInfo"></b></label><div class="pick" id="pkApps">${D.apps.map(a => `<button type="button" data-id="${a.id}">${ic(a.tipo === 'script' ? 'scr' : 'web')}${esc(a.nombre)}</button>`).join('')}</div>
+  <form id="fLic"><div class="campo"><label>Aplicaciones <b id="pkInfo"></b></label>${D.apps.length > 4 ? '<input class="in pkbus" id="pkBus" placeholder="Buscar aplicación…" autocomplete="off" spellcheck="false">' : ''}<div class="pick" id="pkApps">${D.apps.map(a => `<button type="button" data-id="${a.id}">${ic(a.tipo === 'script' ? 'scr' : 'web')}${esc(a.nombre)}</button>`).join('')}</div>
   <p class="ds" style="margin:8px 0 0">Marca una sola, o varias para hacer un <b>pack</b>: un único pago y vencimiento para todas; si no paga se bloquean todas a la vez.</p><input type="hidden" name="app"></div>
   <div class="campo"><label>Cliente</label><input class="in" name="cliente" value="${esc(l.cliente)}" required placeholder="Nombre del cliente"></div>
   <div class="par"><div class="campo"><label>Teléfono</label><input class="in" name="telefono" inputmode="tel" value="${esc(l.telefono)}"></div><div class="campo"><label>Correo</label><input class="in" name="email" type="email" value="${esc(l.email)}"></div></div>
@@ -274,6 +274,15 @@ function editaLic(k) {
   const f = h.querySelector('#fLic'); let sel = idsDe(l.app).filter(i => D.apps.some(a => a.id === i)), tocado = !!k;
   const pon = () => { f.elements.app.value = sel.join(','); h.querySelectorAll('#pkApps button').forEach(b => b.classList.toggle('on', sel.includes(b.dataset.id)));
     h.querySelector('#pkInfo').textContent = sel.length > 1 ? '· PACK DE ' + sel.length : ''; if (!tocado) f.elements.precio.value = appDe(sel.join(',')).precio || ''; };
+  const sinTil = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const bus = h.querySelector('#pkBus');
+  // buscador: filtra por nombre (sin importar tildes ni mayúsculas); las marcadas se ven siempre
+  const filtra = () => { const q = sinTil(bus ? bus.value : '').trim(); let n = 0;
+    h.querySelectorAll('#pkApps button').forEach(b => { const ver = !q || sel.includes(b.dataset.id) || sinTil(b.textContent).includes(q); b.hidden = !ver; if (ver) n++; });
+    let v = h.querySelector('#pkVacio'); if (!n && q) { if (!v) { v = document.createElement('span'); v.id = 'pkVacio'; v.className = 'ds'; h.querySelector('#pkApps').appendChild(v); } v.textContent = 'Ninguna aplicación coincide'; } else if (v) v.remove(); };
+  if (bus) { bus.oninput = filtra;
+    bus.onkeydown = e => { if (e.key !== 'Enter') return; e.preventDefault();
+      const vis = [...h.querySelectorAll('#pkApps button')].filter(b => !b.hidden && !sel.includes(b.dataset.id)); if (vis.length === 1) { vis[0].click(); bus.value = ''; filtra(); } }; }
   h.querySelectorAll('#pkApps button').forEach(b => b.onclick = () => { const id = b.dataset.id; sel = sel.includes(id) ? sel.filter(x => x !== id) : sel.concat(id); bip(520, .04); pon(); });
   f.elements.precio.oninput = () => { tocado = true; }; pon();
   f.onsubmit = async e => { e.preventDefault(); const lic = Object.fromEntries(new FormData(f)); if (k) lic.codigo = k; if (!sel.length) return toast('Elige al menos una aplicación', true);
