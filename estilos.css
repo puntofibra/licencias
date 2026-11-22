@@ -209,3 +209,7 @@ main{padding:18px 14px 40px}
 #pkInfo{color:var(--cian);font-family:var(--mono);letter-spacing:.1em}
 .packl{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 0;max-height:46px;overflow:hidden}
 .packl i{font-style:normal;font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--linea);color:var(--sua);white-space:nowrap}
+.murl{display:flex;gap:6px;margin-bottom:6px}
+.murl .in{flex:1;min-width:0;font-family:var(--mono);font-size:12.5px}
+.murl .btn{flex:none}
+#lstUrl.una .murl .btn{display:none}
