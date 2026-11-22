@@ -259,7 +259,7 @@ async function renueva(k, meses, x, y) { const r = await api('licRenovar', { cod
   if (r.ok) { chispas(x || innerWidth / 2, y || innerHeight / 2); bip(660); setTimeout(() => bip(880), 100); setTimeout(() => bip(1320), 200); toast('Renovada hasta el ' + fecha(D.lics.find(l => l.codigo === k).vence)); pinta(); } else toast(r.error, true); return r; }
 
 function editaLic(k) {
-  const l = k ? D.lics.find(x => x.codigo === k) : { app:fApp || D.apps[0].id, cliente:'', telefono:'', email:'', precio:'', vence:'', maxDisp:'', gracia:'', notas:'' };
+  const l = k ? D.lics.find(x => x.codigo === k) : { app:fApp || '', cliente:'', telefono:'', email:'', precio:'', vence:'', maxDisp:'', gracia:'', notas:'' };
   const d1 = new Date(); d1.setMonth(d1.getMonth() + 1); const def = d1.getFullYear() + '-' + String(d1.getMonth() + 1).padStart(2, '0') + '-' + String(d1.getDate()).padStart(2, '0');
   const h = modal(`<h3>${k ? 'Editar licencia' : 'Nueva licencia'}<button class="x">✕</button></h3><p class="ds">${k ? 'Código ' + k : 'El código se genera solo al guardar.'}</p>
   <form id="fLic"><div class="campo"><label>Aplicaciones <b id="pkInfo"></b></label>${D.apps.length > 4 ? '<input class="in pkbus" id="pkBus" placeholder="Buscar aplicación…" autocomplete="off" spellcheck="false">' : ''}<div class="pick" id="pkApps">${D.apps.map(a => `<button type="button" data-id="${a.id}">${ic(a.tipo === 'script' ? 'scr' : 'web')}${esc(a.nombre)}</button>`).join('')}</div>
