@@ -228,6 +228,8 @@ main{padding:18px 14px 40px}
 .grupo i{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--cian);background:rgba(61,245,255,.1);border-radius:20px;padding:1px 8px}
 .gapp + .grupo{margin-top:26px}
 .appc{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.card.coge{transform:scale(1.05)!important;z-index:5;cursor:grabbing;border-color:var(--cian)!important;box-shadow:0 24px 60px rgba(0,0,0,.6),0 0 0 2px var(--cian),0 0 34px rgba(61,245,255,.4)!important}
+.card.coge{transform:scale(1.05)!important;z-index:20;transition:none!important;animation:none!important;cursor:grabbing;border-color:var(--cian)!important;box-shadow:0 24px 60px rgba(0,0,0,.6),0 0 0 2px var(--cian),0 0 34px rgba(61,245,255,.4)!important}
 .ordenando .card:not(.coge){opacity:.75}
 body.sinsel{-webkit-user-select:none;user-select:none}
+.gapp{position:relative}
+.ordenando .card:not(.coge){transition:transform .2s,opacity .2s}
