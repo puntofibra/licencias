@@ -67,6 +67,8 @@ h1 span{background:linear-gradient(90deg,var(--cian),var(--vio));-webkit-backgro
 .plan span{font-size:12px;color:var(--sua)}
 .plan b{font-family:var(--disp);font-size:19px}
 .plan small{font-size:11px;color:var(--cian);font-weight:600}
+.plan s{font-size:11px;color:var(--sua);opacity:.8}
+.dto{display:inline-block;margin:-4px 0 12px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:700;color:#0b1020;background:linear-gradient(90deg,#3df5ff,#8b5cff)}
 .plan.top3{border-color:rgba(139,92,255,.5);background:rgba(139,92,255,.08)}
 .motivo{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;font-size:12.5px;color:var(--sua)}
 .motivo .kbd{font-size:13px}
@@ -219,8 +221,9 @@ footer svg{width:12px;height:12px;vertical-align:-1px;margin-right:4px}
       <div class="top"><h3>Tu licencia</h3><span class="pill ${est[0]}"><i></i>${est[1]}</span></div>
       ${L.vence ? `<div class="hasta">${L.estado === 'vencida' || (d != null && d < 0) ? 'Venció el' : 'Pagada hasta el'}<b>${fechaES(L.vence)}</b>${txtDias ? '· ' + txtDias : ''}</div>
       <div class="barra2"><i style="width:${pct}%"></i></div>` : '<div class="hasta">Licencia sin fecha de caducidad</div>'}
+      ${L.descuento > 0 && L.pagos && L.pagos.length ? `<div class="dto">Descuento aplicado: ${eur(L.descuento)} menos cada mes</div>` : ''}
       ${L.pagos && L.pagos.length ? `<h4>${L.estado === 'vencida' || L.estado === 'bloqueada' || L.enGracia ? 'Renueva tu licencia' : '¿Quieres adelantar pagos? Se suman a tu fecha actual'}</h4>
-      <div class="planes">${L.pagos.map(p => `<a class="plan ${p.meses === 3 ? 'top3' : ''}" href="${esc(p.url)}" target="_blank" rel="noopener"><span>${p.meses === 12 ? '1 año' : p.meses === 1 ? '1 mes' : p.meses + ' meses'}</span><b>${eur(p.importe)}</b><small>Pagar</small></a>`).join('')}</div>
+      <div class="planes">${L.pagos.map(p => `<a class="plan ${p.meses === 3 ? 'top3' : ''}" href="${esc(p.url)}" target="_blank" rel="noopener"><span>${p.meses === 12 ? '1 año' : p.meses === 1 ? '1 mes' : p.meses + ' meses'}</span>${L.descuento > 0 ? `<s>${eur(Math.round((L.precio + L.descuento) * p.meses * 100) / 100)}</s>` : ''}<b>${eur(p.importe)}</b><small>Pagar</small></a>`).join('')}</div>
       <div class="motivo">Al pagar, escribe en el <b style="color:var(--txt)">motivo del pago</b> tu código <span class="kbd">${esc(L.codigo)}<button id="bCod">Copiar</button></span> y se renovará solo en unos minutos.</div>` : ''}
     </div>`;
   }
