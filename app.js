@@ -603,7 +603,7 @@ function vApps(cat) {
   const juego = cat === 'juego';
   const tarjeta = (a, i) => { const ls = D.lics.filter(l => idsDe(l.app).includes(a.id)), act = ls.filter(l => l.ef === 'activa'), pend = ls.filter(l => l.ef === 'pendiente'), kb = D.scripts[a.id];
     const off = a.estado === 'apagada', c = catDe(a);
-    return `<div class="card appc tilt st ${off ? 'apagada' : ''}" style="--i:${i}" data-a="${a.id}"><div class="brillo"></div><div class="atop"><div class="ico">${ic(CAT[c].ic)}</div>${off ? '<span class="chip c-mal">Apagada</span>' : ''}${c === 'script' ? `<button class="sw ${off ? '' : 'on'}" title="Encender / apagar para todos los clientes"></button>` : ''}</div><h4>${esc(a.nombre)}</h4>
+    return `<div class="card appc tilt st ${off ? 'apagada' : ''}" style="--i:${i}" data-a="${a.id}"><div class="brillo"></div><div class="atop"><div class="ico">${ic(CAT[c].ic)}</div>${off ? '<span class="chip c-mal">Apagada</span>' : ''}<button class="sw ${off ? '' : 'on'}" title="Encender / apagar para todos los clientes"></button></div><h4>${esc(a.nombre)}</h4>
     <span style="font-size:11.5px;color:var(--sua)">${CAT[c].t} · id <span style="font-family:var(--mono);color:var(--cian)">${a.id}</span></span>
     ${c === 'juego' ? `<div class="meta" style="margin-top:14px"><span>Pagadas <b class="c-ok">${act.length}</b></span><span>Pendientes <b class="c-warn">${pend.length}</b></span><span>Total <b>${eur(act.reduce((s, l) => s + num(l.precio, 0), 0))}</b></span></div>
     <div class="meta" style="margin-top:8px"><span>Precio <b>${eur(a.precio)}</b> · pago único</span></div>`
@@ -619,7 +619,7 @@ function vApps(cat) {
   $('#main').querySelectorAll('.gapp').forEach(g => ordenable(g, '[data-a]', 'a', todas, ids => api('appsOrden', { ids }), (id, e) => e && e.target.closest('.sw') ? onOffApp(id) : editaApp(id)));
 }
 async function onOffApp(id) { const a = app1(id), off = a.estado !== 'apagada';
-  if (off && !await confirma('Apagar ' + a.nombre, 'Dejará de funcionar para todos los clientes que lo usan, aunque tengan la licencia pagada, en su próxima comprobación (como mucho 3 horas). Les saldrá un aviso de «Error de conexión». El resto de scripts de su licencia seguirán funcionando.', 'Apagar')) return;
+  if (off && !await confirma('Apagar ' + a.nombre, (catDe(a) === 'script' ? 'Dejará de funcionar para todos los clientes que lo usan, aunque tengan la licencia pagada, en su próxima comprobación (como mucho 3 horas). Les saldrá un aviso de «Error de conexión». El resto de scripts de su licencia seguirán funcionando.' : 'Dejará de funcionar para todos los clientes que la usan, aunque tengan la licencia pagada, en cuanto vuelva a comprobar la licencia. Les saldrá el aviso de que está desactivada temporalmente.'), 'Apagar')) return;
   const r = await api('appEstado', { id, estado: off ? 'apagada' : '' }); if (r.ok) { toast(off ? 'Aplicación apagada' : 'Aplicación encendida', off); pinta(); } else toast(r.error || 'No se ha podido cambiar', true);
 }
 // Mantener pulsada una tarjeta medio segundo la coge; se arrastra y al soltarla se guarda el orden
