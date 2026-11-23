@@ -103,6 +103,8 @@ const maxDe = l => num(l.maxDisp, num(D.cfg.maxDisp, 0));
 const catDe = a => a.tipo === 'script' ? 'script' : a.tipo === 'juego' ? 'juego' : 'web';
 const CAT = { script:{ v:'scripts', t:'Script Tampermonkey', ic:'scr' }, web:{ v:'aplicaciones', t:'Aplicación web', ic:'web' }, juego:{ v:'juegos', t:'Juego', ic:'juego' } };
 const vitalicia = l => l.tipo === 'vitalicia';
+// categoría de una licencia según sus apps: si lleva alguna app web es de Aplicaciones; si todas son juegos, de Juegos; si no, de Scripts
+const catLic = l => { const cs = idsDe(l.app).map(i => catDe(app1(i))); return cs.includes('web') ? 'web' : cs.length && cs.every(c => c === 'juego') ? 'juego' : cs.includes('script') ? 'script' : 'web'; };
 function estadoDe(l) {
   if (l.ef === 'pendiente') return { k:'pendientes', t:'Pendiente de pago', c:'c-warn', col:'var(--warn)' };
   if (l.ef === 'bloqueada') return { k:'bloqueadas', t:'Bloqueada', c:'c-mal', col:'var(--mal)' };
@@ -241,7 +243,8 @@ function vLics() {
   $('#main').innerHTML = `<div class="vista">${cab('LICENCIAS', '', bNueva('bNueva'))}
   <div class="barra"><input class="in" id="iBusca" placeholder="Buscar cliente, código, teléfono…" value="${esc(busca)}"><select class="in" id="sApp"><option value="">Todas las apps</option>${D.apps.map(a => `<option value="${a.id}" ${fApp === a.id ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('')}</select></div>
   <div class="filtros">${[['todas', 'Todas'], ['activas', 'Activas']].concat(cuentas.pendientes ? [['pendientes', 'Pendientes de pago']] : []).concat([['vencer', 'Por vencer'], ['vencidas', 'Vencidas'], ['bloqueadas', 'Bloqueadas']]).map(f => `<button class="${filtro === f[0] ? 'on' : ''}" data-f="${f[0]}">${f[1]}<i>${cuentas[f[0]]}</i></button>`).join('')}</div>
-  <div class="grid">${lista.map(tarjetaLic).join('')}</div>
+  ${[['web', 'Aplicaciones', 'web'], ['script', 'Scripts de Tampermonkey', 'scr'], ['juego', 'Juegos', 'juego']].map(([c, t, ico]) => { const g = lista.filter(l => catLic(l) === c);
+    return g.length ? `<h5 class="grupo">${ic(ico)}${t}<i>${g.length}</i></h5><div class="grid">${g.map(tarjetaLic).join('')}</div>` : ''; }).join('')}
   ${lista.length ? '' : `<div class="vacio">${ic('lic')}${D.lics.length ? 'Nada con ese filtro' : D.apps.length ? 'Crea tu primera licencia con el botón NUEVA' : 'Primero da de alta una aplicación, un juego o un script'}</div>`}</div>`;
   $('#bNueva').onclick = () => { if (D.apps.length) editaLic(); else { toast('Primero crea una aplicación', true); ir('aplicaciones'); } };
   $('#iBusca').oninput = e => { busca = e.target.value; clearTimeout(vLics.t); vLics.t = setTimeout(() => { pinta(); const i = $('#iBusca'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); };
