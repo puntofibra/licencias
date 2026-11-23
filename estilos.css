@@ -271,3 +271,7 @@ body.sinsel{-webkit-user-select:none;user-select:none}
 .campana.on{border-color:rgba(255,77,109,.45);background:rgba(255,77,109,.08)}
 .campana.on svg{stroke:#ff4d6d;opacity:1;filter:drop-shadow(0 0 6px rgba(255,77,109,.6))}
 .campana:active{transform:scale(.88)}
+
+/* descuento */
+s.dto{color:var(--sua);font-size:.85em;opacity:.75}
+.dtoTag{font-style:normal;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;background:rgba(61,245,255,.15);color:var(--cian,#3df5ff);margin-left:4px}
