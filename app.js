@@ -351,7 +351,7 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
 // así arranca al instante y no llama al servidor en cada página que abre el cliente.
 const REVISA_H = 3;
 // versión del loader: al subirla, el panel actualiza los enlaces guardados y Tampermonkey se lo baja solo a los clientes
-const LOADER_V = '2.5';
+const LOADER_V = '2.6';
 async function refrescaEnlaces() {
   try {
     if (!D || !D.inst || localStorage.getItem('loader_v') === LOADER_V) return;
@@ -410,6 +410,13 @@ function loader(l, a) {
     var u = location.href, ok = function (p) { return patron(p).test(u); };
     if (!r || r.exc.some(ok)) return !r;
     return !r.inc.length || r.inc.some(ok);
+  }
+  // aviso entre scripts de la misma licencia en esta web: "el servidor ya ha confirmado que está pagada"
+  var CLAVE_OK = 'fmx_ok_' + String(LIC).replace(/[^A-Za-z0-9]/g, '');
+  function okVisto() { try { return +(localStorage.getItem(CLAVE_OK) || 0); } catch (e) { return 0; } }
+  function okConfirmado() {
+    try { localStorage.setItem(CLAVE_OK, String(Date.now())); } catch (e) {}
+    var c = document.getElementById('fmx-lic-' + String(LIC).replace(/[^A-Za-z0-9]/g, '')); if (c) c.remove();
   }
   function guardadas() { try { return JSON.parse(GM_getValue('lic_m', '') || 'null'); } catch (e) { return null; } }
   function lanza(c) {
@@ -508,7 +515,7 @@ function loader(l, a) {
             var r = null; try { r = JSON.parse(x.responseText); } catch (e) {}
             if (r && r.ok && r.code) {
               var nn = { t: Date.now(), lic: LIC, code: r.code, run: runAt(r.code) };
-              GM_setValue('lic_cache', JSON.stringify(nn)); GM_setValue('lic_m', JSON.stringify(reglas(r.code))); GM_setValue('lic_no', ''); GM_setValue('lic_err', 0);
+              GM_setValue('lic_cache', JSON.stringify(nn)); GM_setValue('lic_m', JSON.stringify(reglas(r.code))); GM_setValue('lic_no', ''); GM_setValue('lic_err', 0); okConfirmado();
               d.className = 'ok'; d.querySelector('b').textContent = 'Conexión restablecida';
               d.querySelector('svg').innerHTML = '<path d="M20 6 9 17l-5-5"/>';
               d.querySelector('p').textContent = 'Conexión verificada correctamente. El servicio vuelve a estar activo y ya puedes seguir trabajando.'; d.querySelector('code').textContent = 'HTTP 200 · OK · conexión cifrada';
@@ -534,13 +541,14 @@ function loader(l, a) {
   if (c && edad < REVISA) return;          // comprobada hace poco: no se llama al servidor
   var no = null;
   try { no = JSON.parse(GM_getValue('lic_no', '') || 'null'); } catch (e) {}
-  if (!c && no && no.lic === LIC && Date.now() - no.t < 600000) return aviso(no.r);   // bloqueada: vuelve a preguntar a los 10 min
+  // si otro script de la licencia ya ha visto que está pagada después de este "sin pagar", se descarta y se pregunta al servidor
+  if (!c && no && no.lic === LIC && Date.now() - no.t < 600000 && okVisto() < no.t) return aviso(no.r);   // bloqueada: vuelve a preguntar a los 10 min
 
   GM_xmlhttpRequest({
     method: 'GET', url: API + '?a=script&k=' + LIC + '&app=' + APP + '&d=' + dev + '&ua=' + encodeURIComponent(navigator.userAgent), timeout: 25000,
     onload: function (x) {
       var r; try { r = JSON.parse(x.responseText); } catch (e) { return; }
-      if (r.ok && r.code) { var n = { t: Date.now(), lic: LIC, code: r.code, run: runAt(r.code) }; GM_setValue('lic_cache', JSON.stringify(n)); GM_setValue('lic_m', JSON.stringify(reglas(r.code))); GM_setValue('lic_no', ''); lanza(n); }
+      if (r.ok && r.code) { var n = { t: Date.now(), lic: LIC, code: r.code, run: runAt(r.code) }; GM_setValue('lic_cache', JSON.stringify(n)); GM_setValue('lic_m', JSON.stringify(reglas(r.code))); GM_setValue('lic_no', ''); okConfirmado(); lanza(n); }
       // licencia al día pero el script aún sin código: queda en espera, sin avisos, y vuelve a mirar a las 3 horas
       else if (r.estado === 'sincodigo') { GM_setValue('lic_cache', JSON.stringify({ t: Date.now(), lic: LIC, code: '', run: 'document-idle' })); GM_setValue('lic_no', ''); }
       else { GM_setValue('lic_cache', ''); GM_setValue('lic_no', JSON.stringify({ t: Date.now(), lic: LIC, r: r })); aviso(r); }
