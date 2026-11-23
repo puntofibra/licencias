@@ -265,7 +265,7 @@ function tarjetaLic(l, i) { const e = estadoDe(l), a = appDe(l.app), nd = dispN(
   return `<div class="card lic tilt st" style="--i:${Math.min(i, 14)};--col:${e.col}" data-k="${l.codigo}"><div class="brillo"></div>
   <div class="top"><div><h4>${esc(l.cliente)}</h4><span class="ap">${esc(a.nombre)}</span></div><span class="chip ${e.c}"><i class="pt"></i>${e.t}</span></div>
   ${a.pack ? `<div class="packl">${a.pack.map(x => `<i>${esc(x.nombre)}</i>`).join('')}</div>` : ''}<button class="cod"><span>${l.codigo}</span>${ic('copia')}</button>
-  <div class="meta">${vitalicia(l) ? `<span>Licencia <b>vitalicia</b></span><span>${precioH(l)} pago único</span>${l.origen === 'juego' ? '<span>Creada por el <b>juego</b></span>' : ''}` : `<span>Vence <b>${l.vence ? fecha(l.vence) : 'nunca'}</b></span><span>${precioH(l)}/mes${dto(l) ? ` <i class="dtoTag">-${eur(dto(l))}</i>` : ''}</span><span>Disp. <b>${nd}${mx ? '/' + mx : ''}</b></span>`}</div>
+  <div class="meta">${vitalicia(l) ? `<span>Licencia <b>vitalicia</b></span><span>${num(l.precio, 0) ? precioH(l) + ' pago único' : '<b>Sin coste</b>'}</span>${l.origen === 'juego' ? '<span>Creada por el <b>juego</b></span>' : ''}` : `<span>Vence <b>${l.vence ? fecha(l.vence) : 'nunca'}</b></span><span>${precioH(l)}/mes${dto(l) ? ` <i class="dtoTag">-${eur(dto(l))}</i>` : ''}</span><span>Disp. <b>${nd}${mx ? '/' + mx : ''}</b></span>`}</div>
   <div class="acc"><button class="sw ${l.estado !== 'bloqueada' ? 'on' : ''}" title="Activar / bloquear"></button><span class="sp"></span>
   ${l.telefono ? `<a class="btn min" href="${waCliente(l)}" target="_blank" rel="noopener" title="WhatsApp">${ic('wa')}</a>` : ''}${vitalicia(l) ? (l.ef === 'pendiente' ? `<button class="btn min ok bRen">${ic('rec')}Marcar pagada</button>` : '') : `<button class="btn min ok bRen">${ic('rec')}+1 mes</button>`}</div></div>`; }
 async function renueva(k, meses, x, y) { const r = await api('licRenovar', { codigo:k, meses });
@@ -279,9 +279,10 @@ function editaLic(k) {
   <p class="ds" style="margin:8px 0 0">Marca una sola, o varias para hacer un <b>pack</b>: un único pago y vencimiento para todas; si no paga se bloquean todas a la vez.</p><input type="hidden" name="app"></div>
   <div class="campo"><label>Cliente</label><input class="in" name="cliente" value="${esc(l.cliente)}" required placeholder="Nombre del cliente"></div>
   <div class="par"><div class="campo"><label>Teléfono</label><input class="in" name="telefono" inputmode="tel" value="${esc(l.telefono)}"></div><div class="campo"><label>Correo</label><input class="in" name="email" type="email" value="${esc(l.email)}"></div></div>
-  <div class="par"><div class="campo"><label>${vitalicia(l) ? 'Precio (€)' : 'Mensualidad (€)'}</label><input class="in" name="precio" inputmode="decimal" value="${esc(k && dto(l) ? pReal(l) : l.precio)}"></div><div class="campo"><label>Descuento (€)</label><input class="in" name="descuento" inputmode="decimal" value="${esc(k && dto(l) ? dto(l) : '')}" placeholder="Opcional"></div></div>
+  <div class="campo"><div style="display:flex;align-items:center;gap:12px"><button type="button" class="sw ${vitalicia(l) ? 'on' : ''}" id="vitSw" title="Vitalicia / mensual"></button><div><b id="vitTit">${vitalicia(l) ? 'Licencia vitalicia' : 'Licencia mensual'}</b><p class="ds" id="vitDs" style="margin:2px 0 0">${vitalicia(l) ? 'No caduca nunca y no paga mensualidades. Puedes volver a pasarla a mensual cuando quieras.' : 'Paga cada mes. Actívalo para hacerla vitalicia (sin mensualidades).'}</p></div></div></div>
+  <div class="par"><div class="campo"><label id="lPrecio">${vitalicia(l) ? 'Precio (€, pago único)' : 'Mensualidad (€)'}</label><input class="in" name="precio" inputmode="decimal" value="${esc(k && dto(l) ? pReal(l) : l.precio)}"></div><div class="campo"><label>Descuento (€)</label><input class="in" name="descuento" inputmode="decimal" value="${esc(k && dto(l) ? dto(l) : '')}" placeholder="Opcional"></div></div>
   <p class="ds" id="dtoInfo" style="margin:-4px 0 12px"></p>
-  <div class="campo"><label>Vence el</label><input class="in" name="vence" type="date" value="${esc(k ? l.vence : def)}"></div>
+  <div class="campo" id="cVence"${vitalicia(l) ? ' style="display:none"' : ''}><label>Vence el</label><input class="in" name="vence" type="date" value="${esc(k && l.vence ? l.vence : def)}"></div>
   <div class="par"><div class="campo"><label>Máx. dispositivos</label><input class="in" name="maxDisp" inputmode="numeric" value="${esc(l.maxDisp)}" placeholder="${esc(D.cfg.maxDisp)} (por defecto)"></div><div class="campo"><label>Días de gracia</label><input class="in" name="gracia" inputmode="numeric" value="${esc(l.gracia)}" placeholder="${esc(D.cfg.gracia)} (por defecto)"></div></div>
   <div class="campo"><label>Notas</label><input class="in" name="notas" value="${esc(l.notas)}"></div>
   <p class="ds" style="margin:0 0 12px">Sin fecha de vencimiento la licencia no caduca nunca. Dispositivos a 0 = sin límite.</p>
@@ -303,7 +304,15 @@ function editaLic(k) {
     h.querySelector('#dtoInfo').innerHTML = Dd > 0 ? (Dd < P ? `El cliente verá <s>${eur(P)}</s> y pagará <b class="c-ok">${eur(Math.round((P - Dd) * 100) / 100)}</b>` : '<span class="c-mal">El descuento tiene que ser menor que el precio</span>') : ''; };
   f.elements.precio.oninput = () => { tocado = true; dInfo(); }; f.elements.descuento.oninput = dInfo;
   const pon0 = pon; pon = () => { pon0(); dInfo(); }; pon();
+  // vitalicia o mensual (se puede cambiar cuando quiera)
+  let vit = vitalicia(l); const vSw = h.querySelector('#vitSw');
+  vSw.onclick = () => { vit = !vit; vSw.classList.toggle('on', vit); bip(vit ? 880 : 520, .04);
+    h.querySelector('#vitTit').textContent = vit ? 'Licencia vitalicia' : 'Licencia mensual';
+    h.querySelector('#vitDs').textContent = vit ? 'No caduca nunca y no paga mensualidades. Puedes volver a pasarla a mensual cuando quieras.' : 'Paga cada mes. Actívalo para hacerla vitalicia (sin mensualidades).';
+    h.querySelector('#lPrecio').textContent = vit ? 'Precio (€, pago único)' : 'Mensualidad (€)';
+    h.querySelector('#cVence').style.display = vit ? 'none' : ''; };
   f.onsubmit = async e => { e.preventDefault(); const lic = Object.fromEntries(new FormData(f)); if (k) lic.codigo = k; if (!sel.length) return toast('Elige al menos una aplicación', true);
+    lic.tipo = vit ? 'vitalicia' : ''; if (vit) lic.vence = ''; else if (!lic.vence) lic.vence = def;
     { const P = num(lic.precio, 0), Dd = num(lic.descuento, 0); if (Dd > 0) { if (Dd >= P) return toast('El descuento tiene que ser menor que el precio', true); lic.precio = String(Math.round((P - Dd) * 100) / 100); lic.descuento = String(Dd); } else lic.descuento = ''; }
     const r = await api('licGuardar', { lic }); if (r.ok) { cierra(); toast(k ? 'Licencia guardada' : 'Licencia creada'); vista = 'licencias'; pinta(); if (!k) ficha(r.codigo); } else toast(r.error, true); };
 }
