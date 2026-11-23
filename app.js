@@ -14,6 +14,7 @@ const P = {
   aj:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.3l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2.2-1.3L14 3h-4l-.4 2.5a7 7 0 0 0-2.2 1.3l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2.6l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2.2 1.3L10 21h4l.4-2.5a7 7 0 0 0 2.2-1.3l2.3 1 2-3.4-2-1.5c.1-.4.1-.9.1-1.3z"/>',
   mas:'<path d="M12 5v14M5 12h14"/>', bor:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', copia:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>', wa:'<path d="M3.5 20.5 5 16a8.5 8.5 0 1 1 3.3 3.2z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5"/>',
   rec:'<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>', sal:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  juego:'<path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.6 1.4L15 14H9l-1.4 1.9A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/><path d="M8 11.5v3M6.5 13h3"/><circle cx="15.5" cy="12.5" r=".6"/><circle cx="17.5" cy="13.8" r=".6"/>',
   web:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>', scr:'<path d="m8 8-5 4 5 4M16 8l5 4-5 4M13.5 5l-3 14"/>',
   inst:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>', comp:'<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 11 7.6-3.9M8.2 13l7.6 3.9"/>',
   nfc:'<path d="M6 8.5a8 8 0 0 1 0 7M10 6a12 12 0 0 1 0 12M14 3.5a16 16 0 0 1 0 17"/>', caja:'<path d="M3 8 12 3l9 5v8l-9 5-9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
@@ -98,12 +99,17 @@ const appDe = v => { const ids = idsDe(v); if (ids.length < 2) return app1(ids[0
   return { id:ids.join(','), nombre:'Pack · ' + ids.length + ' apps', tipo:'pack', precio:as.reduce((t, a) => t + num(a.precio, 0), 0), url:'', pack:as }; };
 const dispN = l => { const ds = D.disp.filter(d => d.codigo === l.codigo), ids = idsDe(l.app); return ids.length < 2 ? ds.length : Math.max(0, ...ids.map(i => ds.filter(d => d.app === i).length)); };
 const maxDe = l => num(l.maxDisp, num(D.cfg.maxDisp, 0));
+// categoría de cada app: script de Tampermonkey, juego o aplicación web
+const catDe = a => a.tipo === 'script' ? 'script' : a.tipo === 'juego' ? 'juego' : 'web';
+const CAT = { script:{ v:'scripts', t:'Script Tampermonkey', ic:'scr' }, web:{ v:'aplicaciones', t:'Aplicación web', ic:'web' }, juego:{ v:'juegos', t:'Juego', ic:'juego' } };
+const vitalicia = l => l.tipo === 'vitalicia';
 function estadoDe(l) {
+  if (l.ef === 'pendiente') return { k:'pendientes', t:'Pendiente de pago', c:'c-warn', col:'var(--warn)' };
   if (l.ef === 'bloqueada') return { k:'bloqueadas', t:'Bloqueada', c:'c-mal', col:'var(--mal)' };
   if (l.ef === 'vencida') return { k:'vencidas', t:'Vencida', c:'c-mal', col:'var(--mal)' };
   if (l.enGracia) return { k:'vencer', t:'En gracia', c:'c-warn', col:'var(--warn)' };
   if (l.dias != null && l.dias <= 7) return { k:'vencer', t:l.dias === 0 ? 'Vence hoy' : 'Vence en ' + l.dias + ' d', c:'c-warn', col:'var(--warn)' };
-  return { k:'activas', t:'Activa', c:'c-ok', col:'var(--ok)' };
+  return { k:'activas', t:vitalicia(l) ? 'Vitalicia' : 'Activa', c:'c-ok', col:'var(--ok)' };
 }
 function enlacePago(imp) { const n = num(imp, 0), b = 'https://mypos.com/@' + D.cfg.tag; return n > 0 ? b + '/' + (n % 1 ? n.toFixed(2) : n) : b; }
 function waCliente(l) { let t = String(l.telefono || '').replace(/\D/g, ''); if (t.length === 9) t = '34' + t; const a = appDe(l.app);
@@ -188,7 +194,7 @@ function compartir() { const d = { title:'LICENCIAS · FuturMovil', text:'Panel 
 $('#bInstalar').onclick = instalar; $('#bCompartir').onclick = compartir;
 
 /* ---------- navegación ---------- */
-const VISTAS = [['inicio', 'Inicio', 'inicio'], ['licencias', 'Licencias', 'lic'], ['apps', 'Apps', 'apps'], ['pagos', 'Pagos', 'pagos'], ['actividad', 'Actividad', 'act'], ['ajustes', 'Ajustes', 'aj']];
+const VISTAS = [['inicio', 'Inicio', 'inicio'], ['licencias', 'Licencias', 'lic'], ['scripts', 'Scripts', 'scr'], ['aplicaciones', 'Aplicaciones', 'web'], ['juegos', 'Juegos', 'juego'], ['pagos', 'Pagos', 'pagos'], ['actividad', 'Actividad', 'act'], ['ajustes', 'Ajustes', 'aj']];
 function ir(v) { vista = v; pinta(); $('#main').scrollTop = 0; }
 function pinta() {
   const malas = D.lics.filter(l => l.ef !== 'activa').length; const sinA = (D.mypos || []).filter(g => g.estado === 'sin asignar').length;
@@ -197,7 +203,7 @@ function pinta() {
     + `<button class="nb fin" id="nSalir">${ic('sal')}<span>Cerrar sesión</span></button>`;
   $('#nav').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { bip(520, .04); ir(b.dataset.v); });
   $('#nSalir').onclick = () => salir();
-  ({ inicio:vInicio, licencias:vLics, apps:vApps, pagos:vPagos, actividad:vAct, ajustes:vAjustes })[vista]();
+  ({ inicio:vInicio, licencias:vLics, scripts:() => vApps('script'), aplicaciones:() => vApps('web'), juegos:() => vApps('juego'), apps:() => vApps('web'), pagos:vPagos, actividad:vAct, ajustes:vAjustes })[vista]();
   $('#main').querySelectorAll('[data-n]').forEach(cuenta);
   const b = $('#bRec'); if (b) b.onclick = async () => { const r = await api('datos'); if (r.ok) { pinta(); toast('Actualizado'); } };
 }
@@ -207,7 +213,7 @@ const bNueva = id => `<button class="btn pri min" id="${id}" style="font-size:12
 /* ---------- inicio ---------- */
 function vInicio() {
   const L = D.lics, act = L.filter(l => l.ef === 'activa'), pv = L.filter(l => estadoDe(l).k === 'vencer'), mal = L.filter(l => l.ef !== 'activa');
-  const mrr = act.reduce((s, l) => s + num(l.precio, 0), 0), mes = D.hoy.slice(0, 7), pm = D.pagos.filter(p => p.fecha.slice(0, 7) === mes), cob = pm.reduce((s, p) => s + num(p.importe, 0), 0);
+  const mrr = act.filter(l => !vitalicia(l)).reduce((s, l) => s + num(l.precio, 0), 0), mes = D.hoy.slice(0, 7), pm = D.pagos.filter(p => p.fecha.slice(0, 7) === mes), cob = pm.reduce((s, p) => s + num(p.importe, 0), 0);
   const meses = [], ym = D.hoy.split('-').map(Number);
   for (let i = 5; i >= 0; i--) { const d = new Date(ym[0], ym[1] - 1 - i, 1), k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); meses.push({ n:d.toLocaleDateString('es-ES', { month:'short' }).replace('.', ''), v:D.pagos.filter(p => p.fecha.slice(0, 7) === k).reduce((s, p) => s + num(p.importe, 0), 0) }); }
   const mx = Math.max(1, ...meses.map(x => x.v));
@@ -228,16 +234,16 @@ function filaLog(g) { const l = D.lics.find(x => x.codigo === g.codigo), malo = 
 
 /* ---------- licencias ---------- */
 function vLics() {
-  const cuentas = { todas:D.lics.length, activas:0, vencer:0, vencidas:0, bloqueadas:0 }; D.lics.forEach(l => cuentas[estadoDe(l).k]++);
+  const cuentas = { todas:D.lics.length, activas:0, pendientes:0, vencer:0, vencidas:0, bloqueadas:0 }; D.lics.forEach(l => cuentas[estadoDe(l).k]++);
   const q = busca.toLowerCase();
   const lista = D.lics.filter(l => (filtro === 'todas' || estadoDe(l).k === filtro) && (!fApp || idsDe(l.app).includes(fApp)) && (!q || (l.cliente + ' ' + l.codigo + ' ' + l.telefono + ' ' + l.email + ' ' + appDe(l.app).nombre + ' ' + idsDe(l.app).map(i => app1(i).nombre).join(' ')).toLowerCase().includes(q)))
     .sort((a, b) => (a.vence || '9999').localeCompare(b.vence || '9999'));
   $('#main').innerHTML = `<div class="vista">${cab('LICENCIAS', '', bNueva('bNueva'))}
   <div class="barra"><input class="in" id="iBusca" placeholder="Buscar cliente, código, teléfono…" value="${esc(busca)}"><select class="in" id="sApp"><option value="">Todas las apps</option>${D.apps.map(a => `<option value="${a.id}" ${fApp === a.id ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('')}</select></div>
-  <div class="filtros">${[['todas', 'Todas'], ['activas', 'Activas'], ['vencer', 'Por vencer'], ['vencidas', 'Vencidas'], ['bloqueadas', 'Bloqueadas']].map(f => `<button class="${filtro === f[0] ? 'on' : ''}" data-f="${f[0]}">${f[1]}<i>${cuentas[f[0]]}</i></button>`).join('')}</div>
+  <div class="filtros">${[['todas', 'Todas'], ['activas', 'Activas']].concat(cuentas.pendientes ? [['pendientes', 'Pendientes de pago']] : []).concat([['vencer', 'Por vencer'], ['vencidas', 'Vencidas'], ['bloqueadas', 'Bloqueadas']]).map(f => `<button class="${filtro === f[0] ? 'on' : ''}" data-f="${f[0]}">${f[1]}<i>${cuentas[f[0]]}</i></button>`).join('')}</div>
   <div class="grid">${lista.map(tarjetaLic).join('')}</div>
-  ${lista.length ? '' : `<div class="vacio">${ic('lic')}${D.lics.length ? 'Nada con ese filtro' : D.apps.length ? 'Crea tu primera licencia con el botón NUEVA' : 'Primero da de alta una aplicación en la pestaña Apps'}</div>`}</div>`;
-  $('#bNueva').onclick = () => { if (D.apps.length) editaLic(); else { toast('Primero crea una aplicación', true); ir('apps'); } };
+  ${lista.length ? '' : `<div class="vacio">${ic('lic')}${D.lics.length ? 'Nada con ese filtro' : D.apps.length ? 'Crea tu primera licencia con el botón NUEVA' : 'Primero da de alta una aplicación, un juego o un script'}</div>`}</div>`;
+  $('#bNueva').onclick = () => { if (D.apps.length) editaLic(); else { toast('Primero crea una aplicación', true); ir('aplicaciones'); } };
   $('#iBusca').oninput = e => { busca = e.target.value; clearTimeout(vLics.t); vLics.t = setTimeout(() => { pinta(); const i = $('#iBusca'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); };
   $('#sApp').onchange = e => { fApp = e.target.value; pinta(); };
   $('#main').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filtro = b.dataset.f; pinta(); });
@@ -252,11 +258,11 @@ function tarjetaLic(l, i) { const e = estadoDe(l), a = appDe(l.app), nd = dispN(
   return `<div class="card lic tilt st" style="--i:${Math.min(i, 14)};--col:${e.col}" data-k="${l.codigo}"><div class="brillo"></div>
   <div class="top"><div><h4>${esc(l.cliente)}</h4><span class="ap">${esc(a.nombre)}</span></div><span class="chip ${e.c}"><i class="pt"></i>${e.t}</span></div>
   ${a.pack ? `<div class="packl">${a.pack.map(x => `<i>${esc(x.nombre)}</i>`).join('')}</div>` : ''}<button class="cod"><span>${l.codigo}</span>${ic('copia')}</button>
-  <div class="meta"><span>Vence <b>${l.vence ? fecha(l.vence) : 'nunca'}</b></span><span><b>${eur(l.precio)}</b>/mes</span><span>Disp. <b>${nd}${mx ? '/' + mx : ''}</b></span></div>
+  <div class="meta">${vitalicia(l) ? `<span>Licencia <b>vitalicia</b></span><span><b>${eur(l.precio)}</b> pago único</span>${l.origen === 'juego' ? '<span>Creada por el <b>juego</b></span>' : ''}` : `<span>Vence <b>${l.vence ? fecha(l.vence) : 'nunca'}</b></span><span><b>${eur(l.precio)}</b>/mes</span><span>Disp. <b>${nd}${mx ? '/' + mx : ''}</b></span>`}</div>
   <div class="acc"><button class="sw ${l.estado !== 'bloqueada' ? 'on' : ''}" title="Activar / bloquear"></button><span class="sp"></span>
-  ${l.telefono ? `<a class="btn min" href="${waCliente(l)}" target="_blank" rel="noopener" title="WhatsApp">${ic('wa')}</a>` : ''}<button class="btn min ok bRen">${ic('rec')}+1 mes</button></div></div>`; }
+  ${l.telefono ? `<a class="btn min" href="${waCliente(l)}" target="_blank" rel="noopener" title="WhatsApp">${ic('wa')}</a>` : ''}${vitalicia(l) ? (l.ef === 'pendiente' ? `<button class="btn min ok bRen">${ic('rec')}Marcar pagada</button>` : '') : `<button class="btn min ok bRen">${ic('rec')}+1 mes</button>`}</div></div>`; }
 async function renueva(k, meses, x, y) { const r = await api('licRenovar', { codigo:k, meses });
-  if (r.ok) { chispas(x || innerWidth / 2, y || innerHeight / 2); bip(660); setTimeout(() => bip(880), 100); setTimeout(() => bip(1320), 200); toast('Renovada hasta el ' + fecha(D.lics.find(l => l.codigo === k).vence)); pinta(); } else toast(r.error, true); return r; }
+  if (r.ok) { chispas(x || innerWidth / 2, y || innerHeight / 2); bip(660); setTimeout(() => bip(880), 100); setTimeout(() => bip(1320), 200); const lk = D.lics.find(l => l.codigo === k); toast(vitalicia(lk) ? 'Licencia vitalicia activada' : 'Renovada hasta el ' + fecha(lk.vence)); pinta(); } else toast(r.error, true); return r; }
 
 function editaLic(k) {
   const l = k ? D.lics.find(x => x.codigo === k) : { app:fApp || '', cliente:'', telefono:'', email:'', precio:'', vence:'', maxDisp:'', gracia:'', notas:'' };
@@ -292,9 +298,9 @@ function editaLic(k) {
 function ficha(k) {
   const l = D.lics.find(x => x.codigo === k); if (!l) return; const e = estadoDe(l), a = appDe(l.app), ds = D.disp.filter(d => d.codigo === k), pg = D.pagos.filter(p => p.codigo === k), mx = maxDe(l), blo = l.estado === 'bloqueada';
   const h = modal(`<h3>${esc(l.cliente)}<span class="chip ${e.c}" style="font-size:9px">${e.t}</span><button class="x">✕</button></h3>
-  <p class="ds">${esc(a.nombre)} · ${eur(l.precio)}/mes · vence ${l.vence ? fecha(l.vence) : 'nunca'}${l.ultimoUso ? ' · último uso ' + fecha(l.ultimoUso) + ' ' + l.ultimoUso.slice(11, 16) : ' · sin usar todavía'}${l.notas ? '<br>' + esc(l.notas) : ''}</p>
+  <p class="ds">${esc(a.nombre)} · ${vitalicia(l) ? eur(l.precio) + ' pago único · licencia vitalicia' + (l.origen === 'juego' ? ' · creada por el juego' : '') : eur(l.precio) + '/mes · vence ' + (l.vence ? fecha(l.vence) : 'nunca')}${l.ultimoUso ? ' · último uso ' + fecha(l.ultimoUso) + ' ' + l.ultimoUso.slice(11, 16) : ' · sin usar todavía'}${l.notas ? '<br>' + esc(l.notas) : ''}</p>
   <button class="cod" id="fCod"><span>${k}</span>${ic('copia')}</button>
-  <h5>Renovar (apunta el pago)</h5><div class="bts"><button class="btn ok" data-m="1">+1 mes</button><button class="btn ok" data-m="3">+3 meses</button><button class="btn ok" data-m="12">+1 año</button></div>
+  ${vitalicia(l) ? (l.ef === 'pendiente' ? `<h5>Pago pendiente</h5><p class="ds" style="margin-bottom:8px">El jugador tiene que pagar ${eur(l.precio)} con este código en el motivo; se activará sola al llegar el pago. Si ya te ha pagado sin el código, márcala tú.</p><div class="bts"><button class="btn ok" data-m="1">Marcar como pagada</button></div>` : '') : `<h5>Renovar (apunta el pago)</h5><div class="bts"><button class="btn ok" data-m="1">+1 mes</button><button class="btn ok" data-m="3">+3 meses</button><button class="btn ok" data-m="12">+1 año</button></div>`}
   <h5>Acciones</h5><div class="bts"><button class="btn ${blo ? 'ok' : 'mal'}" id="fBlo">${blo ? 'Activar' : 'Bloquear'}</button>${l.telefono ? `<a class="btn" href="${waCliente(l)}" target="_blank" rel="noopener">${ic('wa')}WhatsApp</a>` : ''}<button class="btn" id="fCobro">${ic('pagos')}Enlace de pago</button><button class="btn" id="fEd">Editar</button></div>
   <h5>Instalación${a.pack ? ' · una por cada app del pack' : ''}<span class="ayuda">★ entregado · 🔔 avisos de pago</span></h5>${(a.pack || [a]).some(x => x.tipo === 'script') ? `<button class="enlbtn" id="fEnl"><span class="ei">${ic('comp')}</span><span class="et"><b>Enlace de instalación</b><small>Un solo enlace: el cliente lo abre y pulsa Instalar. Sin copiar ni descargar.</small></span><span class="ef">›</span></button>` : ''}<div class="insl">${(a.pack || [a]).map(x => `<div class="insf"><button class="estrella ${idsDe(l.entregados).includes(x.id) ? 'on' : ''}" data-ent="${esc(x.id)}" title="Marcar como entregado al cliente">${ESTRELLA}</button>${x.tipo === 'script' ? `<button class="campana ${idsDe(l.silenciados).includes(x.id) ? 'on' : ''}" data-sil="${esc(x.id)}" title="${idsDe(l.silenciados).includes(x.id) ? AV_OFF : AV_ON}">${idsDe(l.silenciados).includes(x.id) ? CAMPANA_NO : CAMPANA}</button>` : ''}<button class="btn" data-ins="${esc(x.id)}">${ic(x.tipo === 'script' ? 'scr' : 'web')}${a.pack ? esc(x.nombre) : x.tipo === 'script' ? 'Generar loader de Tampermonkey' : 'Ver código de integración'}</button></div>`).join('')}</div>
   <h5>Dispositivos (${a.pack ? ds.length + (mx ? ' · máx. ' + mx + ' por app' : '') : ds.length + (mx ? '/' + mx : '')})</h5>
@@ -571,20 +577,23 @@ function integra(l, a) {
 }
 
 /* ---------- apps ---------- */
-function vApps() {
-  const tarjeta = (a, i) => { const ls = D.lics.filter(l => idsDe(l.app).includes(a.id)), act = ls.filter(l => l.ef === 'activa'), kb = D.scripts[a.id];
-    const off = a.estado === 'apagada';
-    return `<div class="card appc tilt st ${off ? 'apagada' : ''}" style="--i:${i}" data-a="${a.id}"><div class="brillo"></div><div class="atop"><div class="ico">${ic(a.tipo === 'script' ? 'scr' : 'web')}</div>${off ? '<span class="chip c-mal">Apagada</span>' : ''}${a.tipo === 'script' ? `<button class="sw ${off ? '' : 'on'}" title="Encender / apagar para todos los clientes"></button>` : ''}</div><h4>${esc(a.nombre)}</h4>
-    <span style="font-size:11.5px;color:var(--sua)">${a.tipo === 'script' ? 'Script Tampermonkey' : 'Aplicación web'} · id <span style="font-family:var(--mono);color:var(--cian)">${a.id}</span></span>
-    <div class="meta" style="margin-top:14px"><span>Licencias <b>${ls.length}</b></span><span>Activas <b class="c-ok">${act.length}</b></span><span>Mensual <b>${eur(act.reduce((s, l) => s + num(l.precio, 0), 0))}</b></span></div>
-    ${a.tipo === 'script' ? `<div class="meta" style="margin-top:8px"><span>Código: <b class="${kb ? 'c-ok' : 'c-warn'}">${kb ? Math.round(kb / 102.4) / 10 + ' KB subido' : 'sin subir'}</b></span></div>` : ''}</div>`; };
-  const webs = D.apps.filter(a => a.tipo !== 'script'), scrs = D.apps.filter(a => a.tipo === 'script');
-  const grupo = (t, icono, lista, i0) => lista.length ? `<h5 class="grupo">${ic(icono)}${t}<i>${lista.length}</i></h5><div class="grid gapp">${lista.map((a, i) => tarjeta(a, i0 + i)).join('')}</div>` : '';
-  $('#main').innerHTML = `<div class="vista">${cab('APLICACIONES', 'Cada app, juego o script que vendes con licencia' + (D.apps.length > 1 ? ' · mantén pulsada una tarjeta para moverla' : ''), bNueva('bNApp'))}
-  ${grupo('Aplicaciones web', 'web', webs, 0)}${grupo('Scripts de Tampermonkey', 'scr', scrs, webs.length)}
-  ${D.apps.length ? '' : `<div class="vacio">${ic('caja')}Da de alta tu primera app o script con el botón NUEVA</div>`}</div>`;
-  $('#bNApp').onclick = () => editaApp();
-  const todas = () => [...$('#main').querySelectorAll('[data-a]')].map(c => c.dataset.a);
+function vApps(cat) {
+  const juego = cat === 'juego';
+  const tarjeta = (a, i) => { const ls = D.lics.filter(l => idsDe(l.app).includes(a.id)), act = ls.filter(l => l.ef === 'activa'), pend = ls.filter(l => l.ef === 'pendiente'), kb = D.scripts[a.id];
+    const off = a.estado === 'apagada', c = catDe(a);
+    return `<div class="card appc tilt st ${off ? 'apagada' : ''}" style="--i:${i}" data-a="${a.id}"><div class="brillo"></div><div class="atop"><div class="ico">${ic(CAT[c].ic)}</div>${off ? '<span class="chip c-mal">Apagada</span>' : ''}${c === 'script' ? `<button class="sw ${off ? '' : 'on'}" title="Encender / apagar para todos los clientes"></button>` : ''}</div><h4>${esc(a.nombre)}</h4>
+    <span style="font-size:11.5px;color:var(--sua)">${CAT[c].t} · id <span style="font-family:var(--mono);color:var(--cian)">${a.id}</span></span>
+    ${c === 'juego' ? `<div class="meta" style="margin-top:14px"><span>Pagadas <b class="c-ok">${act.length}</b></span><span>Pendientes <b class="c-warn">${pend.length}</b></span><span>Total <b>${eur(act.reduce((s, l) => s + num(l.precio, 0), 0))}</b></span></div>
+    <div class="meta" style="margin-top:8px"><span>Precio <b>${eur(a.precio)}</b> · pago único</span></div>`
+    : `<div class="meta" style="margin-top:14px"><span>Licencias <b>${ls.length}</b></span><span>Activas <b class="c-ok">${act.length}</b></span><span>Mensual <b>${eur(act.reduce((s, l) => s + num(l.precio, 0), 0))}</b></span></div>`}
+    ${c === 'script' ? `<div class="meta" style="margin-top:8px"><span>Código: <b class="${kb ? 'c-ok' : 'c-warn'}">${kb ? Math.round(kb / 102.4) / 10 + ' KB subido' : 'sin subir'}</b></span></div>` : ''}</div>`; };
+  const lista = D.apps.filter(a => catDe(a) === cat);
+  const tit = { script:['SCRIPTS', 'Scripts de Tampermonkey que vendes con licencia'], web:['APLICACIONES', 'Aplicaciones web que vendes con licencia'], juego:['JUEGOS', 'Juegos con licencia vitalicia: la crea el propio juego cuando el jugador pulsa pagar'] }[cat];
+  $('#main').innerHTML = `<div class="vista">${cab(tit[0], tit[1] + (lista.length > 1 ? ' · mantén pulsada una tarjeta para moverla' : ''), bNueva('bNApp'))}
+  ${lista.length ? `<div class="grid gapp">${lista.map(tarjeta).join('')}</div>` : `<div class="vacio">${ic(CAT[cat].ic)}${juego ? 'Aún no hay juegos. Se crean solos cuando un juego conectado pide su primera licencia, o puedes darlos de alta con NUEVA' : 'Aún no hay nada aquí. Da de alta el primero con el botón NUEVA'}</div>`}</div>`;
+  $('#bNApp').onclick = () => editaApp(null, cat);
+  // el orden se guarda para todas las apps: las de esta sección en el orden nuevo y las demás donde estaban
+  const todas = () => { const sec = [...$('#main').querySelectorAll('[data-a]')].map(c => c.dataset.a); let k = 0; return D.apps.map(a => catDe(a) === cat ? sec[k++] : a.id); };
   $('#main').querySelectorAll('.gapp').forEach(g => ordenable(g, '[data-a]', 'a', todas, ids => api('appsOrden', { ids }), (id, e) => e && e.target.closest('.sw') ? onOffApp(id) : editaApp(id)));
 }
 async function onOffApp(id) { const a = app1(id), off = a.estado !== 'apagada';
@@ -620,12 +629,12 @@ function ordenable(grid, sel, key, leer, guardar, abrir) {
 }
 document.addEventListener('touchmove', e => { if (document.body.classList.contains('sinsel')) e.preventDefault(); }, { passive:false });
 const urlsDe = v => String(v || '').split(/[\s,]+/).filter(Boolean);
-function editaApp(id) {
-  const a = id ? appDe(id) : { nombre:'', tipo:'web', precio:'', url:'', notas:'' };
-  const h = modal(`<h3>${id ? esc(a.nombre) : 'Nueva aplicación'}<button class="x">✕</button></h3><p class="ds">${id ? 'Identificador: ' + id : 'Una app o juego que vendes a clientes, o un script de Tampermonkey.'}</p>
+function editaApp(id, cat) {
+  const a = id ? appDe(id) : { nombre:'', tipo:cat || 'web', precio:'', url:'', notas:'' };
+  const h = modal(`<h3>${id ? esc(a.nombre) : 'Nueva aplicación'}<button class="x">✕</button></h3><p class="ds">${id ? 'Identificador: ' + id : 'Una aplicación web, un juego o un script de Tampermonkey. Se guarda en su sección.'}</p>
   <form id="fApp"><div class="campo"><label>Nombre</label><input class="in" name="nombre" value="${esc(a.nombre)}" required placeholder="Ej. Panel Puntofibra"></div>
-  <div class="par"><div class="campo"><label>Tipo</label><select class="in" name="tipo"><option value="web" ${a.tipo !== 'script' ? 'selected' : ''}>Aplicación web</option><option value="script" ${a.tipo === 'script' ? 'selected' : ''}>Script Tampermonkey</option></select></div>
-  <div class="campo"><label>Mensualidad sugerida (€)</label><input class="in" name="precio" inputmode="decimal" value="${esc(a.precio)}" placeholder="Solo de referencia"></div></div>
+  <div class="par"><div class="campo"><label>Tipo</label><select class="in" name="tipo"><option value="web" ${catDe(a) === 'web' ? 'selected' : ''}>Aplicación web</option><option value="juego" ${catDe(a) === 'juego' ? 'selected' : ''}>Juego</option><option value="script" ${catDe(a) === 'script' ? 'selected' : ''}>Script Tampermonkey</option></select></div>
+  <div class="campo"><label id="lPre">Mensualidad sugerida (€)</label><input class="in" name="precio" inputmode="decimal" value="${esc(a.precio)}" placeholder="Solo de referencia"></div></div>
   <div class="campo"><label id="lUrl"></label><div id="lstUrl"></div><button class="btn min w" type="button" id="bUrl" style="margin-top:6px">${ic('mas')}Añadir otra dirección</button><input type="hidden" name="url"></div>
   <div class="campo"><label>Notas</label><input class="in" name="notas" value="${esc(a.notas)}"></div>
   <button class="btn pri w" type="submit">GUARDAR</button></form>
@@ -641,11 +650,13 @@ function editaApp(id) {
     lst.querySelectorAll('input').forEach(i => i.placeholder = s ? 'https://www.ejemplo.com/*' : 'https://…'); };
   (urlsDe(a.url).length ? urlsDe(a.url) : ['']).forEach(fila);
   h.querySelector('#bUrl').onclick = () => { fila('').focus(); marca(); };
-  const pon = () => { const s = esScr(); h.querySelector('#lUrl').textContent = s ? 'Dónde se ejecuta (@match)' : 'URL de la app (opcional)';
+  const pon = () => { const s = esScr(), j = tipo.value === 'juego'; h.querySelector('#lUrl').textContent = s ? 'Dónde se ejecuta (@match)' : j ? 'URL del juego (opcional)' : 'URL de la app (opcional)';
+    h.querySelector('#lPre').textContent = j ? 'Precio de la licencia (€, pago único)' : 'Mensualidad sugerida (€)'; f.elements.precio.placeholder = j ? 'Lo que paga el jugador' : 'Solo de referencia';
     if (!s) [...lst.children].slice(1).forEach(d => d.remove()); marca(); const z = h.querySelector('#zScr'); if (z) z.hidden = !s; };
   pon(); tipo.onchange = pon;
   f.onsubmit = async e => { e.preventDefault(); f.elements.url.value = [...lst.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean).join(' ');
-    const app = Object.fromEntries(new FormData(f)); if (id) app.id = id; const r = await api('appGuardar', { app }); if (r.ok) { cierra(); toast('Aplicación guardada'); pinta(); } else toast(r.error, true); };
+    const app = Object.fromEntries(new FormData(f)); if (id) app.id = id; const r = await api('appGuardar', { app }); if (!r.ok) return toast(r.error, true);
+    cierra(); const dest = CAT[catDe(app)].v; toast(dest === vista ? 'Guardada' : 'Guardada en ' + dest.charAt(0).toUpperCase() + dest.slice(1)); if (dest !== vista && /^(scripts|aplicaciones|juegos|apps)$/.test(vista)) ir(dest); else pinta(); };
   if (!id) return;
   const t = h.querySelector('#tScr'), bS = h.querySelector('#bScr');
   // mientras se carga el código guardado no se puede pegar, para que la carga no borre lo que pegas
