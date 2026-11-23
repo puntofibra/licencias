@@ -351,7 +351,7 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
 // así arranca al instante y no llama al servidor en cada página que abre el cliente.
 const REVISA_H = 3;
 // versión del loader: al subirla, el panel actualiza los enlaces guardados y Tampermonkey se lo baja solo a los clientes
-const LOADER_V = '2.4';
+const LOADER_V = '2.5';
 async function refrescaEnlaces() {
   try {
     if (!D || !D.inst || localStorage.getItem('loader_v') === LOADER_V) return;
@@ -435,7 +435,7 @@ function loader(l, a) {
       if (pack && cobro) {
         // pack: un solo mensaje que deja claro que es un único pago para todas las aplicaciones
         var f = String(r.vence || '').split('-').reverse().join('/');
-        h += '<b style="font-size:15px">' + ICO + 'Licencia de tu pack de aplicaciones</b><br>'
+        h += '<b style="font-size:15px">' + ICO + 'Licencia de tu pack de aplicaciones de FuturMovil</b><br>'
           + (r.estado === 'bloqueada' ? 'La licencia de tu pack está suspendida' : 'La licencia de tu pack venció' + (f ? ' el ' + f : ''))
           + ' y sus <b>' + r.pack + ' aplicaciones</b> se han detenido.'
           + '<div style="margin-top:8px;padding:7px 9px;border:1px dashed rgba(23,255,95,.5);border-radius:6px">Es <b>un único pago</b>' + (r.importe ? ' de <b>' + r.importe + ' €</b>' : '') + ' que reactiva <b>todo el pack</b> a la vez. No tienes que pagar cada aplicación por separado.</div>'
