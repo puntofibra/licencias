@@ -765,6 +765,33 @@ function vAjustes() { const c = D.cfg, ks = listaLlaves(c.llaves);
 
 /* ---------- arranque ---------- */
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+// actualización automática: si cambia el programa en GitHub, se recarga solo (sin pillarte a medias con una ficha abierta)
+(function () {
+  const FIL = ['index.html', 'app.js', 'estilos.css', 'config.js', 'sw.js'];
+  let base = null, yendo = false;
+  const firma = () => Promise.all(FIL.map(f => fetch(f + '?v=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
+    .then(r => r.ok ? (r.headers.get('etag') || r.headers.get('last-modified') || '-') : '').catch(() => '')));
+  async function mira() {
+    if (yendo || document.hidden) return;
+    const fs = await firma(); if (fs.some(x => !x)) return;   // sin conexión: se mira en la próxima
+    const k = fs.join('|'); if (base === null) { base = k; return; }
+    if (k !== base) actualiza();
+  }
+  function actualiza() {
+    yendo = true;
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:16px;background:rgba(10,14,30,.92);border:1px solid rgba(61,245,255,.45);box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 24px rgba(61,245,255,.18);color:#e8eefc;font:600 13px system-ui,sans-serif;backdrop-filter:blur(10px)';
+    d.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(61,245,255,.3);border-top-color:#3df5ff;animation:fmxGira .8s linear infinite"></span><span id="fmxAct">Nueva versión del programa · actualizando…</span><style>@keyframes fmxGira{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(d);
+    let n = 4; const t = setInterval(() => {
+      const ficha = !$('#modal').hidden;   // con una ficha abierta espera a que la cierres o guardes
+      d.querySelector('#fmxAct').textContent = ficha ? 'Nueva versión lista · se actualizará al cerrar esta ventana' : 'Nueva versión del programa · actualizando en ' + Math.max(0, n) + ' s';
+      if (ficha) return; if (n-- <= 0) { clearInterval(t); location.reload(); }
+    }, 1000);
+  }
+  setTimeout(mira, 4000); setInterval(mira, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) mira(); });
+})();
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) fuera(); });
 (async function () {
   const par = new URLSearchParams(location.search).get('par');
