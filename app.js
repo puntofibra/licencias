@@ -179,11 +179,17 @@ async function abrirLlave() {
 }
 function modoPasarLlave(cod) {
   $('#login').hidden = false; $('.pie').hidden = true;
-  $('#lgCuerpo').innerHTML = `<div class="cen">${NFC_HTML}<p id="nfcMsg" style="color:var(--sua);margin:10px 0 14px;font-size:13px">Pulsa el botón y acerca tu llave NFC</p><button class="btn pri w" id="bPasar">ACTIVAR LLAVE</button></div>`;
-  $('#bPasar').onclick = () => { if (!('NDEFReader' in window)) { $('#nfcMsg').textContent = 'Este navegador no lee NFC. Usa Chrome en Android.'; return; }
+  $('#lgCuerpo').innerHTML = `<div class="cen">${NFC_HTML}<p id="nfcMsg" style="color:var(--sua);margin:10px 0 14px;font-size:13px">Preparando el lector NFC…</p><button class="btn pri w" id="bPasar" hidden>ACTIVAR LLAVE</button></div>`;
+  const arranca = () => { if (!('NDEFReader' in window)) { $('#nfcMsg').textContent = 'Este navegador no lee NFC. Usa Chrome en Android.'; $('#bPasar').hidden = true; return; }
     $('#bPasar').hidden = true; $('#nfcMsg').textContent = 'Acerca la llave a la parte trasera del móvil';
     leeNfc(async s => { $('#nfcMsg').textContent = 'Comprobando…'; const r = await api('parAutorizar', { codigo:cod, llave:s });
       if (r.ok) { paraNfc(); $('#nfcMsg').innerHTML = '<b class="c-ok">Llave correcta.</b> Ya puedes cerrar esta pestaña.'; bip(990); } else $('#nfcMsg').textContent = r.error; }, m => { $('#nfcMsg').textContent = m; $('#bPasar').hidden = false; }); };
+  const boton = () => { $('#nfcMsg').textContent = 'Pulsa el botón una vez para dar permiso al NFC (las próximas veces se activará solo)'; $('#bPasar').hidden = false; };
+  $('#bPasar').onclick = arranca;
+  // al abrir el QR se queda esperando la llave sin pulsar nada (si el NFC ya tiene permiso en este móvil)
+  if (!('NDEFReader' in window)) return arranca();
+  if (navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name:'nfc' }).then(p => p.state === 'granted' ? arranca() : boton()).catch(arranca);
+  else arranca();
 }
 
 /* ---------- instalar / compartir ---------- */
@@ -379,7 +385,7 @@ function nombreDisp(ua) { ua = String(ua || ''); if (!ua) return 'Dispositivo'; 
 // así arranca al instante y no llama al servidor en cada página que abre el cliente.
 const REVISA_H = 3;
 // versión del loader: al subirla, el panel actualiza los enlaces guardados y Tampermonkey se lo baja solo a los clientes
-const LOADER_V = '2.6';
+const LOADER_V = '2.7';
 async function refrescaEnlaces() {
   try {
     if (!D || !D.inst || localStorage.getItem('loader_v') === LOADER_V) return;
@@ -447,10 +453,33 @@ function loader(l, a) {
     var c = document.getElementById('fmx-lic-' + String(LIC).replace(/[^A-Za-z0-9]/g, '')); if (c) c.remove();
   }
   function guardadas() { try { return JSON.parse(GM_getValue('lic_m', '') || 'null'); } catch (e) { return null; } }
+  // scripts con "@grant none" (o sin @grant): en Tampermonkey se ejecutan en la propia página y usan sus
+  // variables (jQuery $, funciones de la web...). Se ejecutan igual: dentro de la página, no en el sandbox.
+  function sinGrants(code) {
+    var cab = (String(code || '').match(/==UserScript==([\s\S]*?)==\/UserScript==/) || [])[1] || '', g = [];
+    cab.replace(/@grant[ \t]+(\S+)/g, function (x, v) { g.push(v); return x; });
+    return g.every(function (v) { return v === 'none'; });
+  }
+  function enPagina(code) {
+    var id = 'fmx_run_' + Math.random().toString(36).slice(2);
+    try {
+      var s = document.createElement('script');
+      s.textContent = 'window[' + JSON.stringify(id) + ']=1;try{' + code + '\n}catch(e){console.error(' + JSON.stringify('[' + APP + ']') + ',e)}';
+      (document.head || document.documentElement).appendChild(s); s.remove();
+      if (unsafeWindow[id]) { try { delete unsafeWindow[id]; } catch (e) {} return true; }
+    } catch (e) {}
+    return false;   // la web no deja meter scripts (CSP): se usa el plan B
+  }
   function lanza(c) {
     if (lanzado || !c || !c.code) return; lanzado = true;
     if (!tocaR(reglas(c.code))) return;
-    cuando(c.run, function () { try { Function.apply(null, NOMBRES.concat(c.code)).apply(null, VALORES); } catch (e) { console.error('[' + APP + ']', e); } });
+    cuando(c.run, function () {
+      try {
+        if (!sinGrants(c.code)) return Function.apply(null, NOMBRES.concat(c.code)).apply(null, VALORES);
+        if (enPagina(c.code)) return;
+        Function.apply(null, NOMBRES.concat('with (unsafeWindow) {\n' + c.code + '\n}')).apply(null, VALORES);
+      } catch (e) { console.error('[' + APP + ']', e); }
+    });
   }
   function aviso(r) {
     // los avisos solo salen en las webs donde funciona este script
